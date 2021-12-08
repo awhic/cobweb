@@ -1,0 +1,16 @@
+HTTrack3.49-2+htsswf+htsjava launched on Tue, 07 Dec 2021 20:22:55 at https://cobwebmaroon6.wpcomstaging.com/ +*.png +*.gif +*.jpg +*.jpeg +*.css +*.js -ad.doubleclick.net/* -mime:application/foobar
+(winhttrack -qwC2%Ps2u1%s%uN0%I0p3DaK0H0%kf2A25000%f#f -F "Mozilla/4.5 (compatible; HTTrack 3.0x; Windows 98)" -%F "<!-- Mirrored from %s%s by HTTrack Website Copier/3.x [XR&CO'2014], %s -->" -%l "en, *" https://cobwebmaroon6.wpcomstaging.com/ -O1 "C:\Users\alex\ROVER\cobweb-arch" +*.png +*.gif +*.jpg +*.jpeg +*.css +*.js -ad.doubleclick.net/* -mime:application/foobar )
+
+Information, Warnings and Errors reported for this mirror:
+note:	the hts-log.txt file, and hts-cache folder, may contain sensitive information,
+	such as username/password authentication for websites mirrored in this project
+	do not share these files/folders if you want these information to remain private
+
+20:23:24	Error: 	"Bad Request" (400) at link https://cobwebmaroon6.wpcomstaging.com/wp-admin/admin-ajax.php (from https://cobwebmaroon6.wpcomstaging.com/)
+20:24:16	Warning: 	Link https://cobwebmaroon6.wpcomstaging.com/give/donate?giveDonationFormInIframe=1 not scanned (follow robots meta tag)
+20:24:45	Error: 	"Method Not Allowed" (405) at link https://cobwebmaroon6.wpcomstaging.com/xmlrpc.php (from https://cobwebmaroon6.wpcomstaging.com/forums/forum/discussion-board/)
+20:24:56	Warning: 	Warning: store application/octet-stream without scan: C:/Users/alex/ROVER/cobweb-arch/cobwebmaroon6.wpcomstaging.com/wp-content/plugins/wp-job-manager/assets/dist/font/job-manager-aa916d5b5333755f80564e47a7f7a89f.svg
+20:24:56	Warning: 	Warning: store application/octet-stream without scan: C:/Users/alex/ROVER/cobweb-arch/cobwebmaroon6.wpcomstaging.com/wp-content/plugins/wp-job-manager/assets/dist/font/jm-logo/jm-04f818ce1471720fb214394b96feb5de.svg
+
+HTTrack Website Copier/3.49-2 mirror complete in 11 minutes 21 seconds : 504 links scanned, 501 files written (28262252 bytes overall) [10228270 bytes received at 15019 bytes/sec], 25205324 bytes transferred using HTTP compression in 395 files, ratio 27%, 7.3 requests per connection
+(2 errors, 3 warnings, 0 messages)

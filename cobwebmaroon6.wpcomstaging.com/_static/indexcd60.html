@@ -1,0 +1,3697 @@
+/**
+ * Makes sure we have all the required levels on the Tribe Object
+ *
+ * @since 4.9.4
+ *
+ * @type   {PlainObject}
+ */
+tribe.events = tribe.events || {};
+tribe.events.views = tribe.events.views || {};
+
+/**
+ * Configures Multiday Events Object in the Global Tribe variable
+ *
+ * @since 4.9.4
+ *
+ * @type  {PlainObject}
+ */
+tribe.events.views.multidayEvents = {};
+
+/**
+ * Initializes in a Strict env the code that manages the Event Views
+ *
+ * @since 4.9.4
+ *
+ * @param  {PlainObject} $   jQuery
+ * @param  {PlainObject} obj tribe.events.views.multidayEvents
+ *
+ * @return {void}
+ */
+( function( $, obj ) {
+	'use strict';
+	var $document = $( document );
+
+	/**
+	 * Selectors used for configuration and setup
+	 *
+	 * @since 4.9.5
+	 *
+	 * @type {PlainObject}
+	 */
+	obj.selectors = {};
+
+	/**
+	 * Selector prefixes used for creating selectors
+	 *
+	 * @since 4.9.5
+	 *
+	 * @type {PlainObject}
+	 */
+	obj.selectorPrefixes = {
+		month: '.tribe-events-calendar-month__',
+	};
+
+	/**
+	 * Selector suffixes used for creating selectors
+	 *
+	 * @since 4.9.5
+	 *
+	 * @type {PlainObject}
+	 */
+	obj.selectorSuffixes = {
+		multidayEvent: 'multiday-event',
+		hiddenMultidayEvent: 'multiday-event-hidden',
+		multidayEventBarInner: 'multiday-event-bar-inner',
+		multidayEventBarInnerFocus: 'multiday-event-bar-inner--focus',
+		multidayEventBarInnerHover: 'multiday-event-bar-inner--hover',
+	};
+
+	/**
+	 * Find visible multiday event that relates to the hidden multiday event
+	 *
+	 * @since 4.9.5
+	 *
+	 * @param {jQuery} $container jQuery object of view container.
+	 * @param {jQuery} $hiddenMultidayEvent jQuery object of hidden multiday event
+	 *
+	 * @return {jQuery} jQuery object of visible multiday event or false if none found
+	 */
+	obj.findVisibleMultidayEvents = function( $container, $hiddenMultidayEvent ) {
+		var eventId = $hiddenMultidayEvent.closest( obj.selectors.multidayEvent ).data( 'event-id' );
+
+		return $container
+			.find( obj.selectors.multidayEvent + '[data-event-id=' + eventId + ']' )
+	};
+
+	/**
+	 * Toggle hover class on visible multiday event when hidden multiday triggers hover event
+	 *
+	 * @since 4.9.4
+	 *
+	 * @param {Event} event event object
+	 *
+	 * @return {void}
+	 */
+	obj.toggleHoverClass = function( event ) {
+		event.data.target.toggleClass( obj.selectors.multidayEventBarInnerHover.className() );
+	};
+
+	/**
+	 * Toggle focus class on visible multiday event when hidden multiday triggers focus event
+	 *
+	 * @since 4.9.4
+	 *
+	 * @param {Event} event event object
+	 *
+	 * @return {void}
+	 */
+	obj.toggleFocusClass = function( event ) {
+		event.data.target.toggleClass( obj.selectors.multidayEventBarInnerFocus.className() );
+	};
+
+	/**
+	 * Unbinds events for hover and focus of hidden multiday events.
+	 *
+	 * @since 4.9.5
+	 *
+	 * @param {jQuery} $container jQuery object of view container.
+	 *
+	 * @return {void}
+	 */
+	obj.unbindMultidayEvents = function( $container ) {
+		var $hiddenMultidayEvents = $container.find( obj.selectors.hiddenMultidayEvent );
+
+		$hiddenMultidayEvents.each( function( hiddenIndex, hiddenMultidayEvent ) {
+			$( hiddenMultidayEvent ).off();
+		} );
+	};
+
+	/**
+	 * Binds events for hover and focus of hidden multiday events.
+	 *
+	 * @since 4.9.4
+	 *
+	 * @param {jQuery} $container jQuery object of view container.
+	 *
+	 * @return {void}
+	 */
+	obj.bindMultidayEvents = function( $container ) {
+		var $hiddenMultidayEvents = $container.find( obj.selectors.hiddenMultidayEvent );
+
+		$hiddenMultidayEvents.each( function( hiddenIndex, hiddenMultidayEvent ) {
+			var $hiddenMultidayEvent = $( hiddenMultidayEvent );
+			var $visibleMultidayEvents = obj.findVisibleMultidayEvents( $container, $hiddenMultidayEvent ); // eslint-disable-line max-len
+
+			$visibleMultidayEvents.each( function( visibleIndex, visibleMultidayEvent ) {
+				var $visibleMultidayEvent = $( visibleMultidayEvent );
+				var $visiblemultidayEventBarInner = $visibleMultidayEvent.find( obj.selectors.multidayEventBarInner ); // eslint-disable-line max-len
+
+				$hiddenMultidayEvent
+					.on(
+						'mouseenter mouseleave',
+						{ target: $visiblemultidayEventBarInner },
+						obj.toggleHoverClass
+					)
+					.on( 'focus blur', { target: $visiblemultidayEventBarInner }, obj.toggleFocusClass );
+			} );
+		} );
+	};
+
+	/**
+	 * Resets selectors to empty object
+	 *
+	 * @since 4.9.5
+	 *
+	 * @return {void}
+	 */
+	obj.deinitSelectors = function() {
+		obj.selectors = {};
+	};
+
+	/**
+	 * Initializes selectors based on view slug
+	 *
+	 * @since 4.9.5
+	 *
+	 * @param {string} viewSlug slug of view
+	 *
+	 * @return {void}
+	 */
+	obj.initSelectors = function( viewSlug ) {
+		var selectorPrefix = obj.selectorPrefixes[ viewSlug ];
+
+		Object
+			.keys( obj.selectorSuffixes )
+			.forEach( function( key ) {
+				obj.selectors[ key ] = selectorPrefix + obj.selectorSuffixes[ key ];
+			} );
+	};
+
+	/**
+	 * Unbinds events for container.
+	 *
+	 * @since 4.9.5
+	 *
+	 * @param  {Event}       event    event object for 'beforeAjaxSuccess.tribeEvents' event
+	 * @param  {jqXHR}       jqXHR    Request object
+	 * @param  {PlainObject} settings Settings that this request was made with
+	 *
+	 * @return {void}
+	 */
+	obj.unbindEvents = function( event, jqXHR, settings ) { // eslint-disable-line no-unused-vars
+		var $container = event.data.container;
+		obj.deinitSelectors();
+		obj.unbindMultidayEvents( $container );
+		$container.off( 'beforeAjaxSuccess.tribeEvents', obj.unbindEvents );
+	};
+
+	/**
+	 * Binds events for container.
+	 *
+	 * @since 4.9.9
+	 *
+	 * @param {jQuery}  $container jQuery object of view container.
+	 * @param {object}  data       data object passed from 'afterSetup.tribeEvents' event.
+	 *
+	 * @return {void}
+	 */
+	obj.bindEvents = function( $container, data ) {
+		var viewSlug = data.slug;
+		var allowedViews = $container.data( 'tribeEventsMultidayEventsAllowedViews' );
+
+		if ( -1 === allowedViews.indexOf( viewSlug ) ) {
+			return;
+		}
+
+		obj.initSelectors( viewSlug );
+		obj.bindMultidayEvents( $container );
+		$container.on( 'beforeAjaxSuccess.tribeEvents', { container: $container }, obj.unbindEvents );
+	};
+
+	/**
+	 * Initialize allowed views
+	 *
+	 * @since 4.9.9
+	 *
+	 * @param {jQuery} $container jQuery object of view container.
+	 *
+	 * @return {void}
+	 */
+	obj.initAllowedViews = function( $container ) {
+		$container.trigger( 'beforeMultidayEventsInitAllowedViews.tribeEvents', [ $container ] );
+
+		var theme = [ 'month' ];
+		$container.data( 'tribeEventsMultidayEventsAllowedViews', theme );
+
+		$container.trigger( 'afterMultidayEventsInitAllowedViews.tribeEvents', [ $container ] );
+	};
+
+	/**
+	 * Initialize multiday events.
+	 *
+	 * @since 4.9.9
+	 *
+	 * @param {Event}   event      event object for 'afterSetup.tribeEvents' event
+	 * @param {integer} index      jQuery.each index param from 'afterSetup.tribeEvents' event.
+	 * @param {jQuery}  $container jQuery object of view container.
+	 * @param {object}  data       data object passed from 'afterSetup.tribeEvents' event.
+	 *
+	 * @return {void}
+	 */
+	obj.init = function( event, index, $container, data ) {
+		obj.initAllowedViews( $container );
+		obj.bindEvents( $container, data );
+	};
+
+	/**
+	 * Handles the initialization of multiday events when Document is ready
+	 *
+	 * @since 4.9.4
+	 *
+	 * @return {void}
+	 */
+	obj.ready = function() {
+		$document.on(
+			'afterSetup.tribeEvents',
+			tribe.events.views.manager.selectors.container,
+			obj.init
+		);
+	};
+
+	// Configure on document ready
+	$( obj.ready );
+} )( jQuery, tribe.events.views.multidayEvents );
+;
+/*!
+ * Datepicker for Bootstrap v1.7.0 (https://github.com/uxsolutions/bootstrap-datepicker)
+ *
+ * Licensed under the Apache License v2.0 (http://www.apache.org/licenses/LICENSE-2.0)
+ */
+
+!function(a){"function"==typeof define&&define.amd?define(["jquery"],a):a("object"==typeof exports?require("jquery"):jQuery)}(function(a,b){function c(){return new Date(Date.UTC.apply(Date,arguments))}function d(){var a=new Date;return c(a.getFullYear(),a.getMonth(),a.getDate())}function e(a,b){return a.getUTCFullYear()===b.getUTCFullYear()&&a.getUTCMonth()===b.getUTCMonth()&&a.getUTCDate()===b.getUTCDate()}function f(c,d){return function(){return d!==b&&a.fn.datepicker.deprecated(d),this[c].apply(this,arguments)}}function g(a){return a&&!isNaN(a.getTime())}function h(b,c){function d(a,b){return b.toLowerCase()}var e,f=a(b).data(),g={},h=new RegExp("^"+c.toLowerCase()+"([A-Z])");c=new RegExp("^"+c.toLowerCase());for(var i in f)c.test(i)&&(e=i.replace(h,d),g[e]=f[i]);return g}function i(b){var c={};if(q[b]||(b=b.split("-")[0],q[b])){var d=q[b];return a.each(p,function(a,b){b in d&&(c[b]=d[b])}),c}}var j=function(){var b={get:function(a){return this.slice(a)[0]},contains:function(a){for(var b=a&&a.valueOf(),c=0,d=this.length;c<d;c++)if(0<=this[c].valueOf()-b&&this[c].valueOf()-b<864e5)return c;return-1},remove:function(a){this.splice(a,1)},replace:function(b){b&&(a.isArray(b)||(b=[b]),this.clear(),this.push.apply(this,b))},clear:function(){this.length=0},copy:function(){var a=new j;return a.replace(this),a}};return function(){var c=[];return c.push.apply(c,arguments),a.extend(c,b),c}}(),k=function(b,c){a.data(b,"datepicker",this),this._process_options(c),this.dates=new j,this.viewDate=this.o.defaultViewDate,this.focusDate=null,this.element=a(b),this.isInput=this.element.is("input"),this.inputField=this.isInput?this.element:this.element.find("input"),this.component=!!this.element.hasClass("date")&&this.element.find(".add-on, .input-group-addon, .btn"),this.component&&0===this.component.length&&(this.component=!1),this.isInline=!this.component&&this.element.is("div"),this.picker=a(r.template),this._check_template(this.o.templates.leftArrow)&&this.picker.find(".prev").html(this.o.templates.leftArrow),this._check_template(this.o.templates.rightArrow)&&this.picker.find(".next").html(this.o.templates.rightArrow),this._buildEvents(),this._attachEvents(),this.isInline?this.picker.addClass("datepicker-inline").appendTo(this.element):this.picker.addClass("datepicker-dropdown dropdown-menu"),this.o.rtl&&this.picker.addClass("datepicker-rtl"),this.o.calendarWeeks&&this.picker.find(".datepicker-days .datepicker-switch, thead .datepicker-title, tfoot .today, tfoot .clear").attr("colspan",function(a,b){return Number(b)+1}),this._process_options({startDate:this._o.startDate,endDate:this._o.endDate,daysOfWeekDisabled:this.o.daysOfWeekDisabled,daysOfWeekHighlighted:this.o.daysOfWeekHighlighted,datesDisabled:this.o.datesDisabled}),this._allow_update=!1,this.setViewMode(this.o.startView),this._allow_update=!0,this.fillDow(),this.fillMonths(),this.update(),this.isInline&&this.show()};k.prototype={constructor:k,_resolveViewName:function(b){return a.each(r.viewModes,function(c,d){if(b===c||a.inArray(b,d.names)!==-1)return b=c,!1}),b},_resolveDaysOfWeek:function(b){return a.isArray(b)||(b=b.split(/[,\s]*/)),a.map(b,Number)},_check_template:function(c){try{if(c===b||""===c)return!1;if((c.match(/[<>]/g)||[]).length<=0)return!0;var d=a(c);return d.length>0}catch(a){return!1}},_process_options:function(b){this._o=a.extend({},this._o,b);var e=this.o=a.extend({},this._o),f=e.language;q[f]||(f=f.split("-")[0],q[f]||(f=o.language)),e.language=f,e.startView=this._resolveViewName(e.startView),e.minViewMode=this._resolveViewName(e.minViewMode),e.maxViewMode=this._resolveViewName(e.maxViewMode),e.startView=Math.max(this.o.minViewMode,Math.min(this.o.maxViewMode,e.startView)),e.multidate!==!0&&(e.multidate=Number(e.multidate)||!1,e.multidate!==!1&&(e.multidate=Math.max(0,e.multidate))),e.multidateSeparator=String(e.multidateSeparator),e.weekStart%=7,e.weekEnd=(e.weekStart+6)%7;var g=r.parseFormat(e.format);e.startDate!==-(1/0)&&(e.startDate?e.startDate instanceof Date?e.startDate=this._local_to_utc(this._zero_time(e.startDate)):e.startDate=r.parseDate(e.startDate,g,e.language,e.assumeNearbyYear):e.startDate=-(1/0)),e.endDate!==1/0&&(e.endDate?e.endDate instanceof Date?e.endDate=this._local_to_utc(this._zero_time(e.endDate)):e.endDate=r.parseDate(e.endDate,g,e.language,e.assumeNearbyYear):e.endDate=1/0),e.daysOfWeekDisabled=this._resolveDaysOfWeek(e.daysOfWeekDisabled||[]),e.daysOfWeekHighlighted=this._resolveDaysOfWeek(e.daysOfWeekHighlighted||[]),e.datesDisabled=e.datesDisabled||[],a.isArray(e.datesDisabled)||(e.datesDisabled=e.datesDisabled.split(",")),e.datesDisabled=a.map(e.datesDisabled,function(a){return r.parseDate(a,g,e.language,e.assumeNearbyYear)});var h=String(e.orientation).toLowerCase().split(/\s+/g),i=e.orientation.toLowerCase();if(h=a.grep(h,function(a){return/^auto|left|right|top|bottom$/.test(a)}),e.orientation={x:"auto",y:"auto"},i&&"auto"!==i)if(1===h.length)switch(h[0]){case"top":case"bottom":e.orientation.y=h[0];break;case"left":case"right":e.orientation.x=h[0]}else i=a.grep(h,function(a){return/^left|right$/.test(a)}),e.orientation.x=i[0]||"auto",i=a.grep(h,function(a){return/^top|bottom$/.test(a)}),e.orientation.y=i[0]||"auto";else;if(e.defaultViewDate instanceof Date||"string"==typeof e.defaultViewDate)e.defaultViewDate=r.parseDate(e.defaultViewDate,g,e.language,e.assumeNearbyYear);else if(e.defaultViewDate){var j=e.defaultViewDate.year||(new Date).getFullYear(),k=e.defaultViewDate.month||0,l=e.defaultViewDate.day||1;e.defaultViewDate=c(j,k,l)}else e.defaultViewDate=d()},_events:[],_secondaryEvents:[],_applyEvents:function(a){for(var c,d,e,f=0;f<a.length;f++)c=a[f][0],2===a[f].length?(d=b,e=a[f][1]):3===a[f].length&&(d=a[f][1],e=a[f][2]),c.on(e,d)},_unapplyEvents:function(a){for(var c,d,e,f=0;f<a.length;f++)c=a[f][0],2===a[f].length?(e=b,d=a[f][1]):3===a[f].length&&(e=a[f][1],d=a[f][2]),c.off(d,e)},_buildEvents:function(){var b={keyup:a.proxy(function(b){a.inArray(b.keyCode,[27,37,39,38,40,32,13,9])===-1&&this.update()},this),keydown:a.proxy(this.keydown,this),paste:a.proxy(this.paste,this)};this.o.showOnFocus===!0&&(b.focus=a.proxy(this.show,this)),this.isInput?this._events=[[this.element,b]]:this.component&&this.inputField.length?this._events=[[this.inputField,b],[this.component,{click:a.proxy(this.show,this)}]]:this._events=[[this.element,{click:a.proxy(this.show,this),keydown:a.proxy(this.keydown,this)}]],this._events.push([this.element,"*",{blur:a.proxy(function(a){this._focused_from=a.target},this)}],[this.element,{blur:a.proxy(function(a){this._focused_from=a.target},this)}]),this.o.immediateUpdates&&this._events.push([this.element,{"changeYear changeMonth":a.proxy(function(a){this.update(a.date)},this)}]),this._secondaryEvents=[[this.picker,{click:a.proxy(this.click,this)}],[this.picker,".prev, .next",{click:a.proxy(this.navArrowsClick,this)}],[this.picker,".day:not(.disabled)",{click:a.proxy(this.dayCellClick,this)}],[a(window),{resize:a.proxy(this.place,this)}],[a(document),{"mousedown touchstart":a.proxy(function(a){this.element.is(a.target)||this.element.find(a.target).length||this.picker.is(a.target)||this.picker.find(a.target).length||this.isInline||this.hide()},this)}]]},_attachEvents:function(){this._detachEvents(),this._applyEvents(this._events)},_detachEvents:function(){this._unapplyEvents(this._events)},_attachSecondaryEvents:function(){this._detachSecondaryEvents(),this._applyEvents(this._secondaryEvents)},_detachSecondaryEvents:function(){this._unapplyEvents(this._secondaryEvents)},_trigger:function(b,c){var d=c||this.dates.get(-1),e=this._utc_to_local(d);this.element.trigger({type:b,date:e,viewMode:this.viewMode,dates:a.map(this.dates,this._utc_to_local),format:a.proxy(function(a,b){0===arguments.length?(a=this.dates.length-1,b=this.o.format):"string"==typeof a&&(b=a,a=this.dates.length-1),b=b||this.o.format;var c=this.dates.get(a);return r.formatDate(c,b,this.o.language)},this)})},show:function(){if(!(this.inputField.prop("disabled")||this.inputField.prop("readonly")&&this.o.enableOnReadonly===!1))return this.isInline||this.picker.appendTo(this.o.container),this.place(),this.picker.show(),this._attachSecondaryEvents(),this._trigger("show"),(window.navigator.msMaxTouchPoints||"ontouchstart"in document)&&this.o.disableTouchKeyboard&&a(this.element).blur(),this},hide:function(){return this.isInline||!this.picker.is(":visible")?this:(this.focusDate=null,this.picker.hide().detach(),this._detachSecondaryEvents(),this.setViewMode(this.o.startView),this.o.forceParse&&this.inputField.val()&&this.setValue(),this._trigger("hide"),this)},destroy:function(){return this.hide(),this._detachEvents(),this._detachSecondaryEvents(),this.picker.remove(),delete this.element.data().datepicker,this.isInput||delete this.element.data().date,this},paste:function(b){var c;if(b.originalEvent.clipboardData&&b.originalEvent.clipboardData.types&&a.inArray("text/plain",b.originalEvent.clipboardData.types)!==-1)c=b.originalEvent.clipboardData.getData("text/plain");else{if(!window.clipboardData)return;c=window.clipboardData.getData("Text")}this.setDate(c),this.update(),b.preventDefault()},_utc_to_local:function(a){if(!a)return a;var b=new Date(a.getTime()+6e4*a.getTimezoneOffset());return b.getTimezoneOffset()!==a.getTimezoneOffset()&&(b=new Date(a.getTime()+6e4*b.getTimezoneOffset())),b},_local_to_utc:function(a){return a&&new Date(a.getTime()-6e4*a.getTimezoneOffset())},_zero_time:function(a){return a&&new Date(a.getFullYear(),a.getMonth(),a.getDate())},_zero_utc_time:function(a){return a&&c(a.getUTCFullYear(),a.getUTCMonth(),a.getUTCDate())},getDates:function(){return a.map(this.dates,this._utc_to_local)},getUTCDates:function(){return a.map(this.dates,function(a){return new Date(a)})},getDate:function(){return this._utc_to_local(this.getUTCDate())},getUTCDate:function(){var a=this.dates.get(-1);return a!==b?new Date(a):null},clearDates:function(){this.inputField.val(""),this.update(),this._trigger("changeDate"),this.o.autoclose&&this.hide()},setDates:function(){var b=a.isArray(arguments[0])?arguments[0]:arguments;return this.update.apply(this,b),this._trigger("changeDate"),this.setValue(),this},setUTCDates:function(){var b=a.isArray(arguments[0])?arguments[0]:arguments;return this.setDates.apply(this,a.map(b,this._utc_to_local)),this},setDate:f("setDates"),setUTCDate:f("setUTCDates"),remove:f("destroy","Method `remove` is deprecated and will be removed in version 2.0. Use `destroy` instead"),setValue:function(){var a=this.getFormattedDate();return this.inputField.val(a),this},getFormattedDate:function(c){c===b&&(c=this.o.format);var d=this.o.language;return a.map(this.dates,function(a){return r.formatDate(a,c,d)}).join(this.o.multidateSeparator)},getStartDate:function(){return this.o.startDate},setStartDate:function(a){return this._process_options({startDate:a}),this.update(),this.updateNavArrows(),this},getEndDate:function(){return this.o.endDate},setEndDate:function(a){return this._process_options({endDate:a}),this.update(),this.updateNavArrows(),this},setDaysOfWeekDisabled:function(a){return this._process_options({daysOfWeekDisabled:a}),this.update(),this},setDaysOfWeekHighlighted:function(a){return this._process_options({daysOfWeekHighlighted:a}),this.update(),this},setDatesDisabled:function(a){return this._process_options({datesDisabled:a}),this.update(),this},place:function(){if(this.isInline)return this;var b=this.picker.outerWidth(),c=this.picker.outerHeight(),d=10,e=a(this.o.container),f=e.width(),g="body"===this.o.container?a(document).scrollTop():e.scrollTop(),h=e.offset(),i=[0];this.element.parents().each(function(){var b=a(this).css("z-index");"auto"!==b&&0!==Number(b)&&i.push(Number(b))});var j=Math.max.apply(Math,i)+this.o.zIndexOffset,k=this.component?this.component.parent().offset():this.element.offset(),l=this.component?this.component.outerHeight(!0):this.element.outerHeight(!1),m=this.component?this.component.outerWidth(!0):this.element.outerWidth(!1),n=k.left-h.left,o=k.top-h.top;"body"!==this.o.container&&(o+=g),this.picker.removeClass("datepicker-orient-top datepicker-orient-bottom datepicker-orient-right datepicker-orient-left"),"auto"!==this.o.orientation.x?(this.picker.addClass("datepicker-orient-"+this.o.orientation.x),"right"===this.o.orientation.x&&(n-=b-m)):k.left<0?(this.picker.addClass("datepicker-orient-left"),n-=k.left-d):n+b>f?(this.picker.addClass("datepicker-orient-right"),n+=m-b):this.o.rtl?this.picker.addClass("datepicker-orient-right"):this.picker.addClass("datepicker-orient-left");var p,q=this.o.orientation.y;if("auto"===q&&(p=-g+o-c,q=p<0?"bottom":"top"),this.picker.addClass("datepicker-orient-"+q),"top"===q?o-=c+parseInt(this.picker.css("padding-top")):o+=l,this.o.rtl){var r=f-(n+m);this.picker.css({top:o,right:r,zIndex:j})}else this.picker.css({top:o,left:n,zIndex:j});return this},_allow_update:!0,update:function(){if(!this._allow_update)return this;var b=this.dates.copy(),c=[],d=!1;return arguments.length?(a.each(arguments,a.proxy(function(a,b){b instanceof Date&&(b=this._local_to_utc(b)),c.push(b)},this)),d=!0):(c=this.isInput?this.element.val():this.element.data("date")||this.inputField.val(),c=c&&this.o.multidate?c.split(this.o.multidateSeparator):[c],delete this.element.data().date),c=a.map(c,a.proxy(function(a){return r.parseDate(a,this.o.format,this.o.language,this.o.assumeNearbyYear)},this)),c=a.grep(c,a.proxy(function(a){return!this.dateWithinRange(a)||!a},this),!0),this.dates.replace(c),this.o.updateViewDate&&(this.dates.length?this.viewDate=new Date(this.dates.get(-1)):this.viewDate<this.o.startDate?this.viewDate=new Date(this.o.startDate):this.viewDate>this.o.endDate?this.viewDate=new Date(this.o.endDate):this.viewDate=this.o.defaultViewDate),d?(this.setValue(),this.element.change()):this.dates.length&&String(b)!==String(this.dates)&&d&&(this._trigger("changeDate"),this.element.change()),!this.dates.length&&b.length&&(this._trigger("clearDate"),this.element.change()),this.fill(),this},fillDow:function(){if(this.o.showWeekDays){var b=this.o.weekStart,c="<tr>";for(this.o.calendarWeeks&&(c+='<th class="cw">&#160;</th>');b<this.o.weekStart+7;)c+='<th class="dow',a.inArray(b,this.o.daysOfWeekDisabled)!==-1&&(c+=" disabled"),c+='">'+q[this.o.language].daysMin[b++%7]+"</th>";c+="</tr>",this.picker.find(".datepicker-days thead").append(c)}},fillMonths:function(){for(var a,b=this._utc_to_local(this.viewDate),c="",d=0;d<12;d++)a=b&&b.getMonth()===d?" focused":"",c+='<span class="month'+a+'">'+q[this.o.language].monthsShort[d]+"</span>";this.picker.find(".datepicker-months td").html(c)},setRange:function(b){b&&b.length?this.range=a.map(b,function(a){return a.valueOf()}):delete this.range,this.fill()},getClassNames:function(b){var c=[],f=this.viewDate.getUTCFullYear(),g=this.viewDate.getUTCMonth(),h=d();return b.getUTCFullYear()<f||b.getUTCFullYear()===f&&b.getUTCMonth()<g?c.push("old"):(b.getUTCFullYear()>f||b.getUTCFullYear()===f&&b.getUTCMonth()>g)&&c.push("new"),this.focusDate&&b.valueOf()===this.focusDate.valueOf()&&c.push("focused"),this.o.todayHighlight&&e(b,h)&&c.push("today"),this.dates.contains(b)!==-1&&c.push("active"),this.dateWithinRange(b)||c.push("disabled"),this.dateIsDisabled(b)&&c.push("disabled","disabled-date"),a.inArray(b.getUTCDay(),this.o.daysOfWeekHighlighted)!==-1&&c.push("highlighted"),this.range&&(b>this.range[0]&&b<this.range[this.range.length-1]&&c.push("range"),a.inArray(b.valueOf(),this.range)!==-1&&c.push("selected"),b.valueOf()===this.range[0]&&c.push("range-start"),b.valueOf()===this.range[this.range.length-1]&&c.push("range-end")),c},_fill_yearsView:function(c,d,e,f,g,h,i){for(var j,k,l,m="",n=e/10,o=this.picker.find(c),p=Math.floor(f/e)*e,q=p+9*n,r=Math.floor(this.viewDate.getFullYear()/n)*n,s=a.map(this.dates,function(a){return Math.floor(a.getUTCFullYear()/n)*n}),t=p-n;t<=q+n;t+=n)j=[d],k=null,t===p-n?j.push("old"):t===q+n&&j.push("new"),a.inArray(t,s)!==-1&&j.push("active"),(t<g||t>h)&&j.push("disabled"),t===r&&j.push("focused"),i!==a.noop&&(l=i(new Date(t,0,1)),l===b?l={}:"boolean"==typeof l?l={enabled:l}:"string"==typeof l&&(l={classes:l}),l.enabled===!1&&j.push("disabled"),l.classes&&(j=j.concat(l.classes.split(/\s+/))),l.tooltip&&(k=l.tooltip)),m+='<span class="'+j.join(" ")+'"'+(k?' title="'+k+'"':"")+">"+t+"</span>";o.find(".datepicker-switch").text(p+"-"+q),o.find("td").html(m)},fill:function(){var d,e,f=new Date(this.viewDate),g=f.getUTCFullYear(),h=f.getUTCMonth(),i=this.o.startDate!==-(1/0)?this.o.startDate.getUTCFullYear():-(1/0),j=this.o.startDate!==-(1/0)?this.o.startDate.getUTCMonth():-(1/0),k=this.o.endDate!==1/0?this.o.endDate.getUTCFullYear():1/0,l=this.o.endDate!==1/0?this.o.endDate.getUTCMonth():1/0,m=q[this.o.language].today||q.en.today||"",n=q[this.o.language].clear||q.en.clear||"",o=q[this.o.language].titleFormat||q.en.titleFormat;if(!isNaN(g)&&!isNaN(h)){this.picker.find(".datepicker-days .datepicker-switch").text(r.formatDate(f,o,this.o.language)),this.picker.find("tfoot .today").text(m).css("display",this.o.todayBtn===!0||"linked"===this.o.todayBtn?"table-cell":"none"),this.picker.find("tfoot .clear").text(n).css("display",this.o.clearBtn===!0?"table-cell":"none"),this.picker.find("thead .datepicker-title").text(this.o.title).css("display","string"==typeof this.o.title&&""!==this.o.title?"table-cell":"none"),this.updateNavArrows(),this.fillMonths();var p=c(g,h,0),s=p.getUTCDate();p.setUTCDate(s-(p.getUTCDay()-this.o.weekStart+7)%7);var t=new Date(p);p.getUTCFullYear()<100&&t.setUTCFullYear(p.getUTCFullYear()),t.setUTCDate(t.getUTCDate()+42),t=t.valueOf();for(var u,v,w=[];p.valueOf()<t;){if(u=p.getUTCDay(),u===this.o.weekStart&&(w.push("<tr>"),this.o.calendarWeeks)){var x=new Date(+p+(this.o.weekStart-u-7)%7*864e5),y=new Date(Number(x)+(11-x.getUTCDay())%7*864e5),z=new Date(Number(z=c(y.getUTCFullYear(),0,1))+(11-z.getUTCDay())%7*864e5),A=(y-z)/864e5/7+1;w.push('<td class="cw">'+A+"</td>")}v=this.getClassNames(p),v.push("day");var B=p.getUTCDate();this.o.beforeShowDay!==a.noop&&(e=this.o.beforeShowDay(this._utc_to_local(p)),e===b?e={}:"boolean"==typeof e?e={enabled:e}:"string"==typeof e&&(e={classes:e}),e.enabled===!1&&v.push("disabled"),e.classes&&(v=v.concat(e.classes.split(/\s+/))),e.tooltip&&(d=e.tooltip),e.content&&(B=e.content)),v=a.isFunction(a.uniqueSort)?a.uniqueSort(v):a.unique(v),w.push('<td class="'+v.join(" ")+'"'+(d?' title="'+d+'"':"")+' data-date="'+p.getTime().toString()+'">'+B+"</td>"),d=null,u===this.o.weekEnd&&w.push("</tr>"),p.setUTCDate(p.getUTCDate()+1)}this.picker.find(".datepicker-days tbody").html(w.join(""));var C=q[this.o.language].monthsTitle||q.en.monthsTitle||"Months",D=this.picker.find(".datepicker-months").find(".datepicker-switch").text(this.o.maxViewMode<2?C:g).end().find("tbody span").removeClass("active");if(a.each(this.dates,function(a,b){b.getUTCFullYear()===g&&D.eq(b.getUTCMonth()).addClass("active")}),(g<i||g>k)&&D.addClass("disabled"),g===i&&D.slice(0,j).addClass("disabled"),g===k&&D.slice(l+1).addClass("disabled"),this.o.beforeShowMonth!==a.noop){var E=this;a.each(D,function(c,d){var e=new Date(g,c,1),f=E.o.beforeShowMonth(e);f===b?f={}:"boolean"==typeof f?f={enabled:f}:"string"==typeof f&&(f={classes:f}),f.enabled!==!1||a(d).hasClass("disabled")||a(d).addClass("disabled"),f.classes&&a(d).addClass(f.classes),f.tooltip&&a(d).prop("title",f.tooltip)})}this._fill_yearsView(".datepicker-years","year",10,g,i,k,this.o.beforeShowYear),this._fill_yearsView(".datepicker-decades","decade",100,g,i,k,this.o.beforeShowDecade),this._fill_yearsView(".datepicker-centuries","century",1e3,g,i,k,this.o.beforeShowCentury)}},updateNavArrows:function(){if(this._allow_update){var a,b,c=new Date(this.viewDate),d=c.getUTCFullYear(),e=c.getUTCMonth(),f=this.o.startDate!==-(1/0)?this.o.startDate.getUTCFullYear():-(1/0),g=this.o.startDate!==-(1/0)?this.o.startDate.getUTCMonth():-(1/0),h=this.o.endDate!==1/0?this.o.endDate.getUTCFullYear():1/0,i=this.o.endDate!==1/0?this.o.endDate.getUTCMonth():1/0,j=1;switch(this.viewMode){case 0:a=d<=f&&e<=g,b=d>=h&&e>=i;break;case 4:j*=10;case 3:j*=10;case 2:j*=10;case 1:a=Math.floor(d/j)*j<=f,b=Math.floor(d/j)*j+j>=h}this.picker.find(".prev").toggleClass("disabled",a),this.picker.find(".next").toggleClass("disabled",b)}},click:function(b){b.preventDefault(),b.stopPropagation();var e,f,g,h;e=a(b.target),e.hasClass("datepicker-switch")&&this.viewMode!==this.o.maxViewMode&&this.setViewMode(this.viewMode+1),e.hasClass("today")&&!e.hasClass("day")&&(this.setViewMode(0),this._setDate(d(),"linked"===this.o.todayBtn?null:"view")),e.hasClass("clear")&&this.clearDates(),e.hasClass("disabled")||(e.hasClass("month")||e.hasClass("year")||e.hasClass("decade")||e.hasClass("century"))&&(this.viewDate.setUTCDate(1),f=1,1===this.viewMode?(h=e.parent().find("span").index(e),g=this.viewDate.getUTCFullYear(),this.viewDate.setUTCMonth(h)):(h=0,g=Number(e.text()),this.viewDate.setUTCFullYear(g)),this._trigger(r.viewModes[this.viewMode-1].e,this.viewDate),this.viewMode===this.o.minViewMode?this._setDate(c(g,h,f)):(this.setViewMode(this.viewMode-1),this.fill())),this.picker.is(":visible")&&this._focused_from&&this._focused_from.focus(),delete this._focused_from},dayCellClick:function(b){var c=a(b.currentTarget),d=c.data("date"),e=new Date(d);this.o.updateViewDate&&(e.getUTCFullYear()!==this.viewDate.getUTCFullYear()&&this._trigger("changeYear",this.viewDate),e.getUTCMonth()!==this.viewDate.getUTCMonth()&&this._trigger("changeMonth",this.viewDate)),this._setDate(e)},navArrowsClick:function(b){var c=a(b.currentTarget),d=c.hasClass("prev")?-1:1;0!==this.viewMode&&(d*=12*r.viewModes[this.viewMode].navStep),this.viewDate=this.moveMonth(this.viewDate,d),this._trigger(r.viewModes[this.viewMode].e,this.viewDate),this.fill()},_toggle_multidate:function(a){var b=this.dates.contains(a);if(a||this.dates.clear(),b!==-1?(this.o.multidate===!0||this.o.multidate>1||this.o.toggleActive)&&this.dates.remove(b):this.o.multidate===!1?(this.dates.clear(),this.dates.push(a)):this.dates.push(a),"number"==typeof this.o.multidate)for(;this.dates.length>this.o.multidate;)this.dates.remove(0)},_setDate:function(a,b){b&&"date"!==b||this._toggle_multidate(a&&new Date(a)),(!b&&this.o.updateViewDate||"view"===b)&&(this.viewDate=a&&new Date(a)),this.fill(),this.setValue(),b&&"view"===b||this._trigger("changeDate"),this.inputField.trigger("change"),!this.o.autoclose||b&&"date"!==b||this.hide()},moveDay:function(a,b){var c=new Date(a);return c.setUTCDate(a.getUTCDate()+b),c},moveWeek:function(a,b){return this.moveDay(a,7*b)},moveMonth:function(a,b){if(!g(a))return this.o.defaultViewDate;if(!b)return a;var c,d,e=new Date(a.valueOf()),f=e.getUTCDate(),h=e.getUTCMonth(),i=Math.abs(b);if(b=b>0?1:-1,1===i)d=b===-1?function(){return e.getUTCMonth()===h}:function(){return e.getUTCMonth()!==c},c=h+b,e.setUTCMonth(c),c=(c+12)%12;else{for(var j=0;j<i;j++)e=this.moveMonth(e,b);c=e.getUTCMonth(),e.setUTCDate(f),d=function(){return c!==e.getUTCMonth()}}for(;d();)e.setUTCDate(--f),e.setUTCMonth(c);return e},moveYear:function(a,b){return this.moveMonth(a,12*b)},moveAvailableDate:function(a,b,c){do{if(a=this[c](a,b),!this.dateWithinRange(a))return!1;c="moveDay"}while(this.dateIsDisabled(a));return a},weekOfDateIsDisabled:function(b){return a.inArray(b.getUTCDay(),this.o.daysOfWeekDisabled)!==-1},dateIsDisabled:function(b){return this.weekOfDateIsDisabled(b)||a.grep(this.o.datesDisabled,function(a){return e(b,a)}).length>0},dateWithinRange:function(a){return a>=this.o.startDate&&a<=this.o.endDate},keydown:function(a){if(!this.picker.is(":visible"))return void(40!==a.keyCode&&27!==a.keyCode||(this.show(),a.stopPropagation()));var b,c,d=!1,e=this.focusDate||this.viewDate;switch(a.keyCode){case 27:this.focusDate?(this.focusDate=null,this.viewDate=this.dates.get(-1)||this.viewDate,this.fill()):this.hide(),a.preventDefault(),a.stopPropagation();break;case 37:case 38:case 39:case 40:if(!this.o.keyboardNavigation||7===this.o.daysOfWeekDisabled.length)break;b=37===a.keyCode||38===a.keyCode?-1:1,0===this.viewMode?a.ctrlKey?(c=this.moveAvailableDate(e,b,"moveYear"),c&&this._trigger("changeYear",this.viewDate)):a.shiftKey?(c=this.moveAvailableDate(e,b,"moveMonth"),c&&this._trigger("changeMonth",this.viewDate)):37===a.keyCode||39===a.keyCode?c=this.moveAvailableDate(e,b,"moveDay"):this.weekOfDateIsDisabled(e)||(c=this.moveAvailableDate(e,b,"moveWeek")):1===this.viewMode?(38!==a.keyCode&&40!==a.keyCode||(b*=4),c=this.moveAvailableDate(e,b,"moveMonth")):2===this.viewMode&&(38!==a.keyCode&&40!==a.keyCode||(b*=4),c=this.moveAvailableDate(e,b,"moveYear")),c&&(this.focusDate=this.viewDate=c,this.setValue(),this.fill(),a.preventDefault());break;case 13:if(!this.o.forceParse)break;e=this.focusDate||this.dates.get(-1)||this.viewDate,this.o.keyboardNavigation&&(this._toggle_multidate(e),d=!0),this.focusDate=null,this.viewDate=this.dates.get(-1)||this.viewDate,this.setValue(),this.fill(),this.picker.is(":visible")&&(a.preventDefault(),a.stopPropagation(),this.o.autoclose&&this.hide());break;case 9:this.focusDate=null,this.viewDate=this.dates.get(-1)||this.viewDate,this.fill(),this.hide()}d&&(this.dates.length?this._trigger("changeDate"):this._trigger("clearDate"),this.inputField.trigger("change"))},setViewMode:function(a){this.viewMode=a,this.picker.children("div").hide().filter(".datepicker-"+r.viewModes[this.viewMode].clsName).show(),this.updateNavArrows(),this._trigger("changeViewMode",new Date(this.viewDate))}};var l=function(b,c){a.data(b,"datepicker",this),this.element=a(b),this.inputs=a.map(c.inputs,function(a){return a.jquery?a[0]:a}),delete c.inputs,this.keepEmptyValues=c.keepEmptyValues,delete c.keepEmptyValues,n.call(a(this.inputs),c).on("changeDate",a.proxy(this.dateUpdated,this)),this.pickers=a.map(this.inputs,function(b){return a.data(b,"datepicker")}),this.updateDates()};l.prototype={updateDates:function(){this.dates=a.map(this.pickers,function(a){return a.getUTCDate()}),this.updateRanges()},updateRanges:function(){var b=a.map(this.dates,function(a){return a.valueOf()});a.each(this.pickers,function(a,c){c.setRange(b)})},dateUpdated:function(c){if(!this.updating){this.updating=!0;var d=a.data(c.target,"datepicker");if(d!==b){var e=d.getUTCDate(),f=this.keepEmptyValues,g=a.inArray(c.target,this.inputs),h=g-1,i=g+1,j=this.inputs.length;if(g!==-1){if(a.each(this.pickers,function(a,b){b.getUTCDate()||b!==d&&f||b.setUTCDate(e)}),e<this.dates[h])for(;h>=0&&e<this.dates[h];)this.pickers[h--].setUTCDate(e);else if(e>this.dates[i])for(;i<j&&e>this.dates[i];)this.pickers[i++].setUTCDate(e);this.updateDates(),delete this.updating}}}},destroy:function(){a.map(this.pickers,function(a){a.destroy()}),a(this.inputs).off("changeDate",this.dateUpdated),delete this.element.data().datepicker},remove:f("destroy","Method `remove` is deprecated and will be removed in version 2.0. Use `destroy` instead")};var m=a.fn.datepicker,n=function(c){var d=Array.apply(null,arguments);d.shift();var e;if(this.each(function(){var b=a(this),f=b.data("datepicker"),g="object"==typeof c&&c;if(!f){var j=h(this,"date"),m=a.extend({},o,j,g),n=i(m.language),p=a.extend({},o,n,j,g);b.hasClass("input-daterange")||p.inputs?(a.extend(p,{inputs:p.inputs||b.find("input").toArray()}),f=new l(this,p)):f=new k(this,p),b.data("datepicker",f)}"string"==typeof c&&"function"==typeof f[c]&&(e=f[c].apply(f,d))}),e===b||e instanceof k||e instanceof l)return this;if(this.length>1)throw new Error("Using only allowed for the collection of a single element ("+c+" function)");return e};a.fn.datepicker=n;var o=a.fn.datepicker.defaults={assumeNearbyYear:!1,autoclose:!1,beforeShowDay:a.noop,beforeShowMonth:a.noop,beforeShowYear:a.noop,beforeShowDecade:a.noop,beforeShowCentury:a.noop,calendarWeeks:!1,clearBtn:!1,toggleActive:!1,daysOfWeekDisabled:[],daysOfWeekHighlighted:[],datesDisabled:[],endDate:1/0,forceParse:!0,format:"mm/dd/yyyy",keepEmptyValues:!1,keyboardNavigation:!0,language:"en",minViewMode:0,maxViewMode:4,multidate:!1,multidateSeparator:",",orientation:"auto",rtl:!1,startDate:-(1/0),startView:0,todayBtn:!1,todayHighlight:!1,updateViewDate:!0,weekStart:0,disableTouchKeyboard:!1,enableOnReadonly:!0,showOnFocus:!0,zIndexOffset:10,container:"body",immediateUpdates:!1,title:"",templates:{leftArrow:"&#x00AB;",rightArrow:"&#x00BB;"},showWeekDays:!0},p=a.fn.datepicker.locale_opts=["format","rtl","weekStart"];a.fn.datepicker.Constructor=k;var q=a.fn.datepicker.dates={en:{days:["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],daysShort:["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],daysMin:["Su","Mo","Tu","We","Th","Fr","Sa"],months:["January","February","March","April","May","June","July","August","September","October","November","December"],monthsShort:["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],today:"Today",clear:"Clear",titleFormat:"MM yyyy"}},r={viewModes:[{names:["days","month"],clsName:"days",e:"changeMonth"},{names:["months","year"],clsName:"months",e:"changeYear",navStep:1},{names:["years","decade"],clsName:"years",e:"changeDecade",navStep:10},{names:["decades","century"],clsName:"decades",e:"changeCentury",navStep:100},{names:["centuries","millennium"],clsName:"centuries",e:"changeMillennium",navStep:1e3}],validParts:/dd?|DD?|mm?|MM?|yy(?:yy)?/g,nonpunctuation:/[^ -\/:-@\u5e74\u6708\u65e5\[-`{-~\t\n\r]+/g,parseFormat:function(a){if("function"==typeof a.toValue&&"function"==typeof a.toDisplay)return a;var b=a.replace(this.validParts,"\0").split("\0"),c=a.match(this.validParts);if(!b||!b.length||!c||0===c.length)throw new Error("Invalid date format.");return{separators:b,parts:c}},parseDate:function(c,e,f,g){function h(a,b){return b===!0&&(b=10),a<100&&(a+=2e3,a>(new Date).getFullYear()+b&&(a-=100)),a}function i(){var a=this.slice(0,j[n].length),b=j[n].slice(0,a.length);return a.toLowerCase()===b.toLowerCase()}if(!c)return b;if(c instanceof Date)return c;if("string"==typeof e&&(e=r.parseFormat(e)),e.toValue)return e.toValue(c,e,f);var j,l,m,n,o,p={d:"moveDay",m:"moveMonth",w:"moveWeek",y:"moveYear"},s={yesterday:"-1d",today:"+0d",tomorrow:"+1d"};if(c in s&&(c=s[c]),/^[\-+]\d+[dmwy]([\s,]+[\-+]\d+[dmwy])*$/i.test(c)){for(j=c.match(/([\-+]\d+)([dmwy])/gi),c=new Date,n=0;n<j.length;n++)l=j[n].match(/([\-+]\d+)([dmwy])/i),m=Number(l[1]),o=p[l[2].toLowerCase()],c=k.prototype[o](c,m);return k.prototype._zero_utc_time(c)}j=c&&c.match(this.nonpunctuation)||[];var t,u,v={},w=["yyyy","yy","M","MM","m","mm","d","dd"],x={yyyy:function(a,b){return a.setUTCFullYear(g?h(b,g):b)},m:function(a,b){if(isNaN(a))return a;for(b-=1;b<0;)b+=12;for(b%=12,a.setUTCMonth(b);a.getUTCMonth()!==b;)a.setUTCDate(a.getUTCDate()-1);return a},d:function(a,b){return a.setUTCDate(b)}};x.yy=x.yyyy,x.M=x.MM=x.mm=x.m,x.dd=x.d,c=d();var y=e.parts.slice();if(j.length!==y.length&&(y=a(y).filter(function(b,c){return a.inArray(c,w)!==-1}).toArray()),j.length===y.length){var z;for(n=0,z=y.length;n<z;n++){if(t=parseInt(j[n],10),l=y[n],isNaN(t))switch(l){case"MM":u=a(q[f].months).filter(i),t=a.inArray(u[0],q[f].months)+1;break;case"M":u=a(q[f].monthsShort).filter(i),t=a.inArray(u[0],q[f].monthsShort)+1}v[l]=t}var A,B;for(n=0;n<w.length;n++)B=w[n],B in v&&!isNaN(v[B])&&(A=new Date(c),x[B](A,v[B]),isNaN(A)||(c=A))}return c},formatDate:function(b,c,d){if(!b)return"";if("string"==typeof c&&(c=r.parseFormat(c)),c.toDisplay)return c.toDisplay(b,c,d);var e={d:b.getUTCDate(),D:q[d].daysShort[b.getUTCDay()],DD:q[d].days[b.getUTCDay()],m:b.getUTCMonth()+1,M:q[d].monthsShort[b.getUTCMonth()],MM:q[d].months[b.getUTCMonth()],yy:b.getUTCFullYear().toString().substring(2),yyyy:b.getUTCFullYear()};e.dd=(e.d<10?"0":"")+e.d,e.mm=(e.m<10?"0":"")+e.m,b=[];for(var f=a.extend([],c.separators),g=0,h=c.parts.length;g<=h;g++)f.length&&b.push(f.shift()),b.push(e[c.parts[g]]);return b.join("")},headTemplate:'<thead><tr><th colspan="7" class="datepicker-title"></th></tr><tr><th class="prev">'+o.templates.leftArrow+'</th><th colspan="5" class="datepicker-switch"></th><th class="next">'+o.templates.rightArrow+"</th></tr></thead>",
+contTemplate:'<tbody><tr><td colspan="7"></td></tr></tbody>',footTemplate:'<tfoot><tr><th colspan="7" class="today"></th></tr><tr><th colspan="7" class="clear"></th></tr></tfoot>'};r.template='<div class="datepicker"><div class="datepicker-days"><table class="table-condensed">'+r.headTemplate+"<tbody></tbody>"+r.footTemplate+'</table></div><div class="datepicker-months"><table class="table-condensed">'+r.headTemplate+r.contTemplate+r.footTemplate+'</table></div><div class="datepicker-years"><table class="table-condensed">'+r.headTemplate+r.contTemplate+r.footTemplate+'</table></div><div class="datepicker-decades"><table class="table-condensed">'+r.headTemplate+r.contTemplate+r.footTemplate+'</table></div><div class="datepicker-centuries"><table class="table-condensed">'+r.headTemplate+r.contTemplate+r.footTemplate+"</table></div></div>",a.fn.datepicker.DPGlobal=r,a.fn.datepicker.noConflict=function(){return a.fn.datepicker=m,this},a.fn.datepicker.version="1.7.0",a.fn.datepicker.deprecated=function(a){var b=window.console;b&&b.warn&&b.warn("DEPRECATED: "+a)},a(document).on("focus.datepicker.data-api click.datepicker.data-api",'[data-provide="datepicker"]',function(b){var c=a(this);c.data("datepicker")||(b.preventDefault(),n.call(c,"show"))}),a(function(){n.call(a('[data-provide="datepicker-inline"]'))})});;
+/**
+ * Makes sure we have all the required levels on the Tribe Object
+ *
+ * @since 4.9.7
+ *
+ * @type   {PlainObject}
+ */
+tribe.events = tribe.events || {};
+tribe.events.views = tribe.events.views || {};
+
+/**
+ * Configures Viewport Object in the Global Tribe variable
+ *
+ * @since 4.9.7
+ *
+ * @type   {PlainObject}
+ */
+tribe.events.views.viewport = {};
+
+/**
+ * Initializes in a Strict env the code that manages the Event Views
+ *
+ * @since 4.9.7
+ *
+ * @param  {PlainObject} $   jQuery
+ * @param  {PlainObject} obj tribe.events.views.viewport
+ *
+ * @return {void}
+ */
+( function( $, obj ) {
+	'use strict';
+	var $window = $( window );
+	var $document = $( document );
+
+	/**
+	 * Object of options
+	 *
+	 * @since 4.9.7
+	 *
+	 * @type {PlainObject}
+	 */
+	obj.options = {
+		MOBILE_BREAKPOINT: tribe.events.views.breakpoints.breakpoints.medium || 768,
+	};
+
+	/**
+	 * Set viewport state for container
+	 *
+	 * @since 4.9.7
+	 *
+	 * @param {jQuery} $container jQuery object of view container
+	 *
+	 * @return {void}
+	 */
+	obj.setViewport = function( $container ) {
+		var state = $container.data( 'tribeEventsState' );
+
+		if ( ! state ) {
+			state = {};
+		}
+
+		state.isMobile = $container.outerWidth() < obj.options.MOBILE_BREAKPOINT;
+		$container.data( 'tribeEventsState', state );
+	};
+
+	/**
+	 * Handles window resize event
+	 *
+	 * @since 4.9.7
+	 *
+	 * @param {Event} event event object for 'resize' event
+	 *
+	 * @return {void}
+	 */
+	obj.handleResize = function( event ) {
+		var $container = event.data.container;
+		obj.setViewport( $container );
+		$container.trigger( 'resize.tribeEvents' );
+	};
+
+	/**
+	 * Unbind events for window resize
+	 *
+	 * @since 5.0.0
+	 *
+	 * @param {jQuery} $container jQuery object of view container
+	 *
+	 * @return {void}
+	 */
+	obj.unbindEvents = function( $container ) { // eslint-disable-line no-unused-vars
+		$window.off( 'resize', obj.handleResize );
+	};
+
+	/**
+	 * Bind events for window resize
+	 *
+	 * @since 4.9.7
+	 *
+	 * @param {jQuery} $container jQuery object of view container
+	 *
+	 * @return {void}
+	 */
+	obj.bindEvents = function( $container ) {
+		$window.on( 'resize', { container: $container }, obj.handleResize );
+	};
+
+	/**
+	 * Deinitialize viewport JS
+	 *
+	 * @since  5.0.0
+	 *
+	 * @param  {Event}       event    event object for 'beforeAjaxSuccess.tribeEvents' event
+	 * @param  {jqXHR}       jqXHR    Request object
+	 * @param  {PlainObject} settings Settings that this request was made with
+	 *
+	 * @return {void}
+	 */
+	obj.deinit = function( event, jqXHR, settings ) { // eslint-disable-line no-unused-vars
+		var $container = event.data.container;
+		obj.unbindEvents( $container );
+		$container.off( 'beforeAjaxSuccess.tribeEvents', obj.deinit );
+	};
+
+	/**
+	 * Initialize viewport JS
+	 *
+	 * @since  4.9.7
+	 *
+	 * @param  {Event}   event      event object for 'afterSetup.tribeEvents' event
+	 * @param  {integer} index      jQuery.each index param from 'afterSetup.tribeEvents' event
+	 * @param  {jQuery}  $container jQuery object of view container
+	 * @param  {object}  data       data object passed from 'afterSetup.tribeEvents' event
+	 *
+	 * @return {void}
+	 */
+	obj.init = function( event, index, $container, data ) { // eslint-disable-line no-unused-vars
+		obj.bindEvents( $container );
+		obj.setViewport( $container );
+		$container.on( 'beforeAjaxSuccess.tribeEvents', { container: $container }, obj.deinit );
+	};
+
+	/**
+	 * Handles the initialization of viewport when Document is ready
+	 *
+	 * @since 4.9.7
+	 *
+	 * @return {void}
+	 */
+	obj.ready = function() {
+		$document.on(
+			'afterSetup.tribeEvents',
+			tribe.events.views.manager.selectors.container,
+			obj.init
+		);
+	};
+
+	// Configure on document ready
+	$( obj.ready );
+} )( jQuery, tribe.events.views.viewport );
+;
+/**
+ * Makes sure we have all the required levels on the Tribe Object
+ *
+ * @since 4.9.4
+ *
+ * @type   {PlainObject}
+ */
+tribe.events = tribe.events || {};
+tribe.events.views = tribe.events.views || {};
+
+/**
+ * Configures Accordion Object in the Global Tribe variable
+ *
+ * @since 4.9.4
+ *
+ * @type   {PlainObject}
+ */
+tribe.events.views.accordion = {};
+
+/**
+ * Initializes in a Strict env the code that manages the Event Views
+ *
+ * @since 4.9.4
+ *
+ * @param  {PlainObject} $   jQuery
+ * @param  {PlainObject} obj tribe.events.views.accordion
+ *
+ * @return {void}
+ */
+( function( $, obj ) {
+	'use strict';
+	var $document = $( document );
+
+	/**
+	 * Selectors used for configuration and setup
+	 *
+	 * @since 4.9.4
+	 *
+	 * @type {PlainObject}
+	 */
+	obj.selectors = {
+		accordionTrigger: '[data-js~="tribe-events-accordion-trigger"]',
+	};
+
+	/**
+	 * Sets open accordion accessibility attributes
+	 *
+	 * @since 4.9.7
+	 *
+	 * @param {jQuery} $header jQuery object of header
+	 * @param {jQuery} $content jQuery object of contents
+	 *
+	 * @return {void}
+	 */
+	obj.setOpenAccordionA11yAttrs = function( $header, $content ) {
+		$header.attr( 'aria-expanded', 'true' )
+		$content.attr( 'aria-hidden', 'false' );
+	};
+
+	/**
+	 * Sets close accordion accessibility attributes
+	 *
+	 * @since 4.9.7
+	 *
+	 * @param {jQuery} $header jQuery object of header
+	 * @param {jQuery} $content jQuery object of contents
+	 *
+	 * @return {void}
+	 */
+	obj.setCloseAccordionA11yAttrs = function( $header, $content ) {
+		$header.attr( 'aria-expanded', 'false' )
+		$content.attr( 'aria-hidden', 'true' );
+	};
+
+	/**
+	 * Closes all accordions in $container
+	 *
+	 * @since 4.9.4
+	 *
+	 * @param {jQuery} $container jQuery object of view container
+	 *
+	 * @return {void}
+	 */
+	obj.closeAllAccordions = function( $container ) {
+		$container.find( obj.selectors.accordionTrigger ).each( function( index, header ) {
+			var $header = $( header );
+			var contentId = $header.attr( 'aria-controls' );
+			var $content = $document.find( '#' + contentId );
+
+			obj.closeAccordion( $header, $content );
+		} );
+	};
+
+	/**
+	 * Opens accordion
+	 *
+	 * @since 4.9.7
+	 *
+	 * @param {jQuery} $header jQuery object of header
+	 * @param {jQuery} $content jQuery object of contents
+	 *
+	 * @return {void}
+	 */
+	obj.openAccordion = function( $header, $content ) {
+		obj.setOpenAccordionA11yAttrs( $header, $content );
+		$content.css( 'display', 'block' );
+	};
+
+	/**
+	 * Closes accordion
+	 *
+	 * @since 4.9.7
+	 *
+	 * @param {jQuery} $header jQuery object of header
+	 * @param {jQuery} $content jQuery object of contents
+	 *
+	 * @return {void}
+	 */
+	obj.closeAccordion = function( $header, $content ) {
+		obj.setCloseAccordionA11yAttrs( $header, $content );
+		$content.css( 'display', '' );
+	};
+
+	/**
+	 * Toggles accordion on header click
+	 *
+	 * @since 4.9.4
+	 *
+	 * @param {Event} event event object of click event
+	 *
+	 * @return {void}
+	 */
+	obj.toggleAccordion = function( event ) {
+		var $container = event.data.container;
+		var $header = $( event.data.target );
+		var contentId = $header.attr( 'aria-controls' );
+		var $content = $container.find( '#' + contentId );
+
+		if ( 'true' === $header.attr( 'aria-expanded' ) ) {
+			obj.closeAccordion( $header, $content );
+		} else {
+			obj.openAccordion( $header, $content );
+		}
+	};
+
+	/**
+	 * Deinitializes accordion accessibility attributes
+	 *
+	 * @since 4.9.7
+	 *
+	 * @param {jQuery} $header jQuery object of header
+	 * @param {jQuery} $content jQuery object of contents
+	 *
+	 * @return {void}
+	 */
+	obj.deinitAccordionA11yAttrs = function( $header, $content ) {
+		$header
+			.removeAttr( 'aria-expanded' )
+			.removeAttr( 'aria-controls' );
+		$content.removeAttr( 'aria-hidden' );
+	};
+
+	/**
+	 * Initializes accordion accessibility attributes
+	 *
+	 * @since 4.9.7
+	 *
+	 * @param {jQuery} $header jQuery object of header
+	 * @param {jQuery} $content jQuery object of contents
+	 *
+	 * @return {void}
+	 */
+	obj.initAccordionA11yAttrs = function( $header, $content ) {
+		$header
+			.attr( 'aria-expanded', 'false' )
+			.attr( 'aria-controls', $content.attr( 'id' ) );
+		$content.attr( 'aria-hidden', 'true' );
+	};
+
+	/**
+	 * Deinitializes accordion
+	 *
+	 * @since 4.9.4
+	 *
+	 * @param {integer} index jQuery.each index param
+	 * @param {HTMLElement} header header element from which to remove event
+	 *
+	 * @return {void}
+	 */
+	obj.deinitAccordion = function( index, header ) {
+		$( header ).off( 'click', obj.toggleAccordion );
+	};
+
+	/**
+	 * Curry function to initialize accordion
+	 * Used to pass in `$container`
+	 *
+	 * @since 4.9.4
+	 *
+	 * @param {jQuery} $container jQuery object of view container
+	 *
+	 * @return {function} function to add event listener to header
+	 */
+	obj.initAccordion = function( $container ) {
+		/**
+		 * Initializes accordion
+		 *
+		 * @since 4.9.4
+		 *
+		 * @param {integer} index jQuery.each index param
+		 * @param {HTMLElement} header header element from which to remove event
+		 *
+		 * @return {void}
+		 */
+		return function( index, header ) {
+			$( header ).on( 'click', { target: header, container: $container }, obj.toggleAccordion );
+		};
+	};
+
+	/**
+	 * Unbinds events for accordion click listeners
+	 *
+	 * @since  4.9.5
+	 *
+	 * @param  {jQuery} $container jQuery object of view container
+	 *
+	 * @return {void}
+	 */
+	obj.unbindAccordionEvents = function( $container ) {
+		$container
+			.find( obj.selectors.accordionTrigger )
+			.each( obj.deinitAccordion );
+	};
+
+	/**
+	 * Binds events for accordion click listeners
+	 *
+	 * @since 4.9.4
+	 *
+	 * @param  {jQuery} $container jQuery object of view container
+	 *
+	 * @return {void}
+	 */
+	obj.bindAccordionEvents = function( $container ) {
+		$container
+			.find( obj.selectors.accordionTrigger )
+			.each( obj.initAccordion( $container ) );
+	};
+
+	/**
+	 * Unbinds events for container
+	 *
+	 * @since  4.9.5
+	 *
+	 * @param  {Event}       event    event object for 'beforeAjaxSuccess.tribeEvents' event
+	 * @param  {jqXHR}       jqXHR    Request object
+	 * @param  {PlainObject} settings Settings that this request was made with
+	 *
+	 * @return {void}
+	 */
+	obj.unbindEvents = function( event, jqXHR, settings ) { // eslint-disable-line no-unused-vars
+		var $container = event.data.container;
+		obj.unbindAccordionEvents( $container );
+		$container.off( 'beforeAjaxSuccess.tribeEvents', obj.unbindEvents );
+	};
+
+	/**
+	 * Binds events for container
+	 *
+	 * @since  4.9.5
+	 *
+	 * @param  {Event}   event      event object for 'afterSetup.tribeEvents' event
+	 * @param  {integer} index      jQuery.each index param from 'afterSetup.tribeEvents' event
+	 * @param  {jQuery}  $container jQuery object of view container
+	 * @param  {object}  data       data object passed from 'afterSetup.tribeEvents' event
+	 *
+	 * @return {void}
+	 */
+	obj.bindEvents = function( event, index, $container, data ) { // eslint-disable-line no-unused-vars, max-len
+		obj.bindAccordionEvents( $container );
+		$container.on( 'beforeAjaxSuccess.tribeEvents', { container: $container }, obj.unbindEvents );
+	};
+
+	/**
+	 * Handles the initialization of the accordions when Document is ready
+	 *
+	 * @since 4.9.4
+	 *
+	 * @return {void}
+	 */
+	obj.ready = function() {
+		if ( ! tribe.events.views.manager ) {
+			// The script might be used outside of the Views v2 context, if that is the case, skip the auto-binding.
+			return;
+		}
+
+		$document.on(
+			'afterSetup.tribeEvents',
+			tribe.events.views.manager.selectors.container,
+			obj.bindEvents
+		);
+	};
+
+	// Configure on document ready
+	$( obj.ready );
+} )( jQuery, tribe.events.views.accordion );
+;
+/**
+ * Makes sure we have all the required levels on the Tribe Object
+ *
+ * @since 4.9.4
+ *
+ * @type   {PlainObject}
+ */
+tribe.events = tribe.events || {};
+tribe.events.views = tribe.events.views || {};
+
+/**
+ * Configures Views Object in the Global Tribe variable
+ *
+ * @since 4.9.4
+ *
+ * @type   {PlainObject}
+ */
+tribe.events.views.viewSelector = {};
+
+/**
+ * Initializes in a Strict env the code that manages the Event Views
+ *
+ * @since 4.9.4
+ *
+ * @param  {PlainObject} $   jQuery
+ * @param  {PlainObject} obj tribe.events.views.viewSelector
+ *
+ * @return {void}
+ */
+( function( $, obj ) {
+	'use strict';
+	var $document = $( document );
+
+	/**
+	 * Selectors used for configuration and setup
+	 *
+	 * @since 4.9.7
+	 *
+	 * @type {PlainObject}
+	 */
+	obj.selectors = {
+		viewSelector: '[data-js="tribe-events-view-selector"]',
+		viewSelectorTabsClass: '.tribe-events-c-view-selector--tabs',
+		viewSelectorButton: '[data-js="tribe-events-view-selector-button"]',
+		viewSelectorButtonActiveClass: '.tribe-events-c-view-selector__button--active',
+		viewSelectorListContainer: '[data-js="tribe-events-view-selector-list-container"]',
+	};
+
+	/**
+	 * Deinitialize accordion based on header and content
+	 *
+	 * @since 4.9.7
+	 *
+	 * @param {jQuery} $header jQuery object of header
+	 * @param {jQuery} $content jQuery object of contents
+	 *
+	 * @return {void}
+	 */
+	obj.deinitAccordion = function( $header, $content ) {
+		tribe.events.views.accordion.deinitAccordion( 0, $header );
+		tribe.events.views.accordion.deinitAccordionA11yAttrs( $header, $content );
+		$content.css( 'display', '' );
+	};
+
+	/**
+	 * Initialize accordion based on header and content
+	 *
+	 * @since 4.9.7
+	 *
+	 * @param {jQuery} $container jQuery object of view container
+	 * @param {jQuery} $header jQuery object of header
+	 * @param {jQuery} $content jQuery object of contents
+	 *
+	 * @return {void}
+	 */
+	obj.initAccordion = function( $container, $header, $content ) {
+		tribe.events.views.accordion.initAccordion( $container )( 0, $header );
+		tribe.events.views.accordion.initAccordionA11yAttrs( $header, $content );
+	};
+
+	/**
+	 * Deinitialize view selector accordion
+	 *
+	 * @since 4.9.7
+	 *
+	 * @param {jQuery} $container jQuery object of view container
+	 *
+	 * @return {void}
+	 */
+	obj.deinitViewSelectorAccordion = function( $container ) {
+		var $viewSelectorButton = $container.find( obj.selectors.viewSelectorButton );
+		var $viewSelectorListContainer = $container.find( obj.selectors.viewSelectorListContainer );
+		obj.deinitAccordion( $viewSelectorButton, $viewSelectorListContainer );
+		$viewSelectorButton.removeClass( obj.selectors.viewSelectorButtonActiveClass.className() );
+	};
+
+	/**
+	 * Initialize view selector accordion
+	 *
+	 * @since 4.9.7
+	 *
+	 * @param {jQuery} $container jQuery object of view container
+	 *
+	 * @return {void}
+	 */
+	obj.initViewSelectorAccordion = function( $container ) {
+		var $viewSelectorButton = $container.find( obj.selectors.viewSelectorButton );
+		var $viewSelectorListContainer = $container.find( obj.selectors.viewSelectorListContainer );
+		obj.initAccordion( $container, $viewSelectorButton, $viewSelectorListContainer );
+	};
+
+	/**
+	 * Initializes view selector state
+	 *
+	 * @since 4.9.8
+	 *
+	 * @param {jQuery} $container jQuery object of view container
+	 *
+	 * @return {void}
+	 */
+	obj.initState = function( $container ) {
+		var $viewSelector = $container.find( obj.selectors.viewSelector );
+		var state = {
+			mobileInitialized: false,
+			desktopInitialized: false,
+		};
+
+		$viewSelector.data( 'tribeEventsState', state );
+	};
+
+	/**
+	 * Deinitializes view selector
+	 *
+	 * @since 4.9.7
+	 *
+	 * @param {jQuery} $container jQuery object of view container
+	 *
+	 * @return {void}
+	 */
+	obj.deinitViewSelector = function( $container ) {
+		obj.deinitViewSelectorAccordion( $container );
+	};
+
+	/**
+	 * Initializes view selector
+	 *
+	 * @since 4.9.8
+	 *
+	 * @param {jQuery} $container jQuery object of view container
+	 *
+	 * @return {void}
+	 */
+	obj.initViewSelector = function( $container ) {
+		var $viewSelector = $container.find( obj.selectors.viewSelector );
+
+		if ( $viewSelector.length ) {
+			var state = $viewSelector.data( 'tribeEventsState' );
+			var isTabs = $viewSelector.hasClass( obj.selectors.viewSelectorTabsClass.className() );
+
+			// If view selector is tabs (has 3 or less options)
+			if ( isTabs ) {
+				var containerState = $container.data( 'tribeEventsState' );
+				var isMobile = containerState.isMobile;
+
+				// If viewport is mobile and mobile state is not initialized
+				if ( isMobile && ! state.mobileInitialized ) {
+					obj.initViewSelectorAccordion( $container );
+					state.desktopInitialized = false;
+					state.mobileInitialized = true;
+					$viewSelector.data( 'tribeEventsState', state );
+
+				// If viewport is desktop and desktop state is not initialized
+				} else if ( ! isMobile && ! state.desktopInitialized ) {
+					obj.deinitViewSelectorAccordion( $container );
+					state.mobileInitialized = false;
+					state.desktopInitialized = true;
+					$viewSelector.data( 'tribeEventsState', state );
+				}
+
+			/**
+			 * If view selector is not tabs (has more than 3 options), it is always an accordion.
+			 * Check if both mobile and desktop states are initialized.
+			 * If mobile and desktop states are not initialized:
+			 */
+			} else if ( ! state.mobileInitialized && ! state.desktopInitialized ) {
+				obj.initViewSelectorAccordion( $container );
+				state.desktopInitialized = true;
+				state.mobileInitialized = true;
+				$viewSelector.data( 'tribeEventsState', state );
+			}
+		}
+	};
+
+	/**
+	 * Toggles active class on view selector button
+	 *
+	 * @since 4.9.7
+	 *
+	 * @param {Event} event event object for click event
+	 *
+	 * @return {void}
+	 */
+	obj.handleViewSelectorButtonClick = function( event ) {
+		event.data.target.toggleClass( obj.selectors.viewSelectorButtonActiveClass.className() );
+	};
+
+	/**
+	 * Handles click event on document
+	 *
+	 * @since 4.9.7
+	 *
+	 * @param {Event} event event object for click event
+	 *
+	 * @return {void}
+	 */
+	obj.handleClick = function( event ) {
+		var isParentViewSelector = Boolean(
+			$( event.target ).closest( obj.selectors.viewSelector ).length
+		);
+
+		if ( ! isParentViewSelector ) {
+			var $container = event.data.container;
+			var $viewSelector = $container.find( obj.selectors.viewSelector );
+			var $viewSelectorButton = $viewSelector.find( obj.selectors.viewSelectorButton );
+
+			/* eslint-disable max-len */
+			if ( $viewSelectorButton.hasClass( obj.selectors.viewSelectorButtonActiveClass.className() ) ) {
+				var $viewSelectorListContainer = $viewSelector.find( obj.selectors.viewSelectorListContainer );
+				$viewSelectorButton.removeClass( obj.selectors.viewSelectorButtonActiveClass.className() );
+				tribe.events.views.accordion.closeAccordion( $viewSelectorButton, $viewSelectorListContainer );
+			}
+			/* eslint-enable max-len */
+		}
+	};
+
+	/**
+	 * Handles resize event
+	 *
+	 * @since 4.9.7
+	 *
+	 * @param {Event} event event object for 'resize.tribeEvents' event
+	 *
+	 * @return {void}
+	 */
+	obj.handleResize = function( event ) {
+		obj.initViewSelector( event.data.container );
+	};
+
+	/**
+	 * Unbinds events for container
+	 *
+	 * @since  4.9.7
+	 *
+	 * @param  {jQuery}  $container jQuery object of view container
+	 *
+	 * @return {void}
+	 */
+	obj.unbindEvents = function( $container ) {
+		$document
+			.off( 'click', obj.handleClick );
+		$container
+			.off( 'resize.tribeEvents', obj.handleResize )
+			.find( obj.selectors.viewSelectorButton )
+			.off( 'click', obj.handleViewSelectorButtonClick );
+	};
+
+	/**
+	 * Binds events for container
+	 *
+	 * @since 4.9.7
+	 *
+	 * @param  {jQuery} $container jQuery object of view container
+	 *
+	 * @return {void}
+	 */
+	obj.bindEvents = function( $container ) {
+		var $viewSelectorButton = $container.find( obj.selectors.viewSelectorButton );
+
+		$document.on( 'click', { container: $container }, obj.handleClick );
+		$container.on( 'resize.tribeEvents', { container: $container }, obj.handleResize );
+		$viewSelectorButton.on(
+			'click',
+			{ target: $viewSelectorButton },
+			obj.handleViewSelectorButtonClick
+		);
+	};
+
+	/**
+	 * Deinitialize view selector JS
+	 *
+	 * @since 4.9.7
+	 *
+	 * @param  {Event}       event    event object for 'beforeAjaxSuccess.tribeEvents' event
+	 * @param  {jqXHR}       jqXHR    Request object
+	 * @param  {PlainObject} settings Settings that this request was made with
+	 *
+	 * @return {void}
+	 */
+	obj.deinit = function( event, jqXHR, settings ) { // eslint-disable-line no-unused-vars
+		var $container = event.data.container;
+		obj.deinitViewSelector( $container );
+		obj.unbindEvents( $container );
+		$container.off( 'beforeAjaxSuccess.tribeEvents', obj.deinit );
+	};
+
+	/**
+	 * Initialize view selector JS
+	 *
+	 * @since 4.9.8
+	 *
+	 * @param  {Event}   event      event object for 'afterSetup.tribeEvents' event
+	 * @param  {integer} index      jQuery.each index param from 'afterSetup.tribeEvents' event
+	 * @param  {jQuery}  $container jQuery object of view container
+	 * @param  {object}  data       data object passed from 'afterSetup.tribeEvents' event
+	 *
+	 * @return {void}
+	 */
+	obj.init = function( event, index, $container, data ) { // eslint-disable-line no-unused-vars
+		var $viewSelector = $container.find( obj.selectors.viewSelector );
+
+		if ( ! $viewSelector.length ) {
+			return;
+		}
+
+		obj.initState( $container );
+		obj.initViewSelector( $container );
+		obj.bindEvents( $container );
+		$container.on( 'beforeAjaxSuccess.tribeEvents', { container: $container }, obj.deinit );
+	};
+
+	/**
+	 * Handles the initialization of the view selector when Document is ready
+	 *
+	 * @since 4.9.4
+	 *
+	 * @return {void}
+	 */
+	obj.ready = function() {
+		$document.on(
+			'afterSetup.tribeEvents',
+			tribe.events.views.manager.selectors.container,
+			obj.init
+		);
+	};
+
+	// Configure on document ready
+	$( obj.ready );
+} )( jQuery, tribe.events.views.viewSelector );
+;
+tribe.events = tribe.events || {};
+tribe.events.views = tribe.events.views || {};
+
+/**
+ * Configures Views navigation scroller Object in the Global Tribe variable
+ *
+ * @since  4.9.8
+ *
+ * @type   {PlainObject}
+ */
+tribe.events.views.navigationScroll = {};
+
+/**
+ * Initializes in a Strict env the code that scrolling when navigation happens
+ * on the new Manager for Views V2.
+ *
+ * @since  4.9.8
+ *
+ * @param  {PlainObject} $   jQuery
+ * @param  {PlainObject} obj tribe.events.views.navigationScroll
+ *
+ * @return {void}
+ */
+( function( $, obj ) {
+	'use strict';
+	var $document = $( document );
+	var $window = $( window );
+
+	/**
+	 * When we have an AJAX Success scroll up when the window is below 25% of the container position.
+	 *
+	 * @since 4.9.5
+	 *
+	 * @param  {Event}   event      event object for 'afterSetup.tribeEvents' event
+	 * @param  {String} html       HTML sent from the REST API
+	 * @param  {String} textStatus Status for the request
+	 * @param  {jqXHR}  qXHR       Request object
+	 *
+	 * @return {void}
+	 */
+	obj.scrollUp = function( event, html, textStatus, qXHR ) { // eslint-disable-line no-unused-vars
+		var $container = $( event.target );
+		var windowTop = $window.scrollTop();
+		var containerOffset = $container.offset();
+		var scrollTopRequirement = windowTop * 0.75;
+
+		if ( scrollTopRequirement > containerOffset.top ) {
+			$window.scrollTop( containerOffset.top );
+		}
+	};
+
+	/**
+	 * Handles the initialization of the scripts when Document is ready
+	 *
+	 * @since  4.9.4
+	 *
+	 * @return {void}
+	 */
+	obj.ready = function() {
+		$document.on(
+			'afterAjaxSuccess.tribeEvents',
+			tribe.events.views.manager.selectors.container,
+			obj.scrollUp
+		);
+	};
+
+	// Configure on document ready
+	$( obj.ready );
+} )( jQuery, tribe.events.views.navigationScroll );
+;
+/**
+ * Makes sure we have all the required levels on the Tribe Object
+ *
+ * @since 4.9.4
+ *
+ * @type   {PlainObject}
+ */
+tribe.events = tribe.events || {};
+tribe.events.views = tribe.events.views || {};
+
+/**
+ * Configures Month Grid Object in the Global Tribe variable
+ *
+ * @since 4.9.4
+ *
+ * @type  {PlainObject}
+ */
+tribe.events.views.monthGrid = {};
+
+/**
+ * Initializes in a Strict env the code that manages the Event Views
+ *
+ * @since 4.9.4
+ *
+ * @param  {PlainObject} $   jQuery
+ * @param  {PlainObject} obj tribe.events.views.monthGrid
+ *
+ * @return {void}
+ */
+( function( $, obj ) {
+	'use strict';
+	var $document = $( document );
+
+	/**
+	 * Selectors used for configuration and setup
+	 *
+	 * @since 4.9.4
+	 *
+	 * @type {PlainObject}
+	 */
+	obj.selectors = {
+		grid: '[data-js="tribe-events-month-grid"]',
+		row: '[data-js="tribe-events-month-grid-row"]',
+		cell: '[data-js="tribe-events-month-grid-cell"]',
+		focusable: '[tabindex]',
+		focused: '[tabindex="0"]',
+	};
+
+	/**
+	 * Object of key codes
+	 *
+	 * @since 4.9.4
+	 *
+	 * @type {PlainObject}
+	 */
+	obj.keyCode = {
+		END: 35,
+		HOME: 36,
+		LEFT: 37,
+		UP: 38,
+		RIGHT: 39,
+		DOWN: 40,
+	};
+
+	/**
+	 * Check if cell described by row and col is valid
+	 *
+	 * @since 4.9.4
+	 *
+	 * @param {array}   grid 2-dimensional array of grid
+	 * @param {integer} row  row number of cell, 0 index
+	 * @param {integer} col  column number of cell, 0 index
+	 *
+	 * @return {boolean} true if cell is valid, false otherwise
+	 */
+	obj.isValidCell = function( grid, row, col ) {
+		return (
+			! isNaN( row ) &&
+			! isNaN( col ) &&
+			row >= 0 &&
+			col >= 0 &&
+			grid &&
+			grid.length &&
+			row < grid.length &&
+			col < grid[ row ].length
+		);
+	};
+
+	/**
+	 * Get next cell from current row, current column, and direction changes
+	 *
+	 * @since 4.9.4
+	 *
+	 * @param {array}   grid       2-dimensional array of grid
+	 * @param {integer} currentRow index of current row
+	 * @param {integer} currentCol index of current column
+	 * @param {integer} directionX number of steps to take in the X direction
+	 * @param {integer} directionY number of steps to take in the Y direction
+	 *
+	 * @return {PlainObject} object containing next row and column indices
+	 */
+	obj.getNextCell = function( grid, currentRow, currentCol, directionX, directionY ) {
+		var row = currentRow + directionY;
+		var col = currentCol + directionX;
+
+		if ( obj.isValidCell( grid, row, col ) ) {
+			return {
+				row: row,
+				col: col,
+			};
+		}
+
+		return {
+			row: currentRow,
+			col: currentCol,
+		};
+	};
+
+	/**
+	 * Set focus pointer to given row and column
+	 *
+	 * @since 4.9.8
+	 *
+	 * @param {jQuery}  $grid jQuery object of grid
+	 * @param {integer} row   index of row
+	 * @param {integer} col   index of column
+	 *
+	 * @return {boolean} boolean of whether focus pointer was set or not
+	 */
+	obj.setFocusPointer = function( $grid, row, col ) {
+		var state = $grid.data( 'tribeEventsState' );
+
+		if ( obj.isValidCell( state.grid, row, col ) ) {
+			state.grid[ state.currentRow ][ state.currentCol ].attr( 'tabindex', '-1' );
+			state.grid[ row ][ col ].attr( 'tabindex', '0' );
+			state.currentRow = row;
+			state.currentCol = col;
+
+			$grid.data( 'tribeEventsState', state );
+
+			return true;
+		}
+
+		return false;
+	};
+
+	/**
+	 * Focus cell at given row and column
+	 *
+	 * @since 4.9.8
+	 *
+	 * @param {jQuery}  $grid jQuery object of grid
+	 * @param {integer} row   index of row
+	 * @param {integer} col   index of column
+	 *
+	 * @return {void}
+	 */
+	obj.focusCell = function( $grid, row, col ) {
+		if ( obj.setFocusPointer( $grid, row, col ) ) {
+			var state = $grid.data( 'tribeEventsState' );
+			state.grid[ row ][ col ].focus();
+		}
+	};
+
+	/**
+	 * Handle keydown event to move focused grid cell
+	 *
+	 * @since 4.9.8
+	 *
+	 * @param {Event} event event object
+	 *
+	 * @return {void}
+	 */
+	obj.handleKeydown = function( event ) {
+		var $grid = event.data.grid;
+		var state = $grid.data( 'tribeEventsState' );
+		var key = event.which || event.keyCode;
+		var row = state.currentRow;
+		var col = state.currentCol;
+		var nextCell;
+
+		switch ( key ) {
+			case obj.keyCode.UP:
+				nextCell = obj.getNextCell( state.grid, row, col, 0, -1 );
+				row = nextCell.row;
+				col = nextCell.col;
+				break;
+			case obj.keyCode.DOWN:
+				nextCell = obj.getNextCell( state.grid, row, col, 0, 1 );
+				row = nextCell.row;
+				col = nextCell.col;
+				break;
+			case obj.keyCode.LEFT:
+				nextCell = obj.getNextCell( state.grid, row, col, -1, 0 );
+				row = nextCell.row;
+				col = nextCell.col;
+				break;
+			case obj.keyCode.RIGHT:
+				nextCell = obj.getNextCell( state.grid, row, col, 1, 0 );
+				row = nextCell.row;
+				col = nextCell.col;
+				break;
+			case obj.keyCode.HOME:
+				if ( event.ctrlKey ) {
+					row = 0;
+				}
+				col = 0;
+				break;
+			case obj.keyCode.END:
+				if ( event.ctrlKey ) {
+					row = state.grid.length - 1;
+				}
+				col = state.grid[ state.currentRow ].length - 1;
+				break;
+			default:
+				return;
+		}
+
+		obj.focusCell( $grid, row, col );
+		event.preventDefault();
+	};
+
+	/**
+	 * Handle click event to focus cell
+	 *
+	 * @since 4.9.8
+	 *
+	 * @param {Event} event event object
+	 *
+	 * @return {void}
+	 */
+	obj.handleClick = function( event ) {
+		var $grid = event.data.grid;
+		var state = $grid.data( 'tribeEventsState' );
+		var $clickedCell = $( event.target ).closest( obj.selectors.focusable );
+
+		for ( var row = 0; row < state.grid.length; row++ ) {
+			for ( var col = 0; col < state.grid[ row ].length; col++ ) {
+				if ( state.grid[ row ][ col ].is( $clickedCell ) ) {
+					obj.focusCell( $grid, row, col );
+					return;
+				}
+			}
+		}
+	};
+
+	/**
+	 * Initializes grid state
+	 *
+	 * @since 4.9.8
+	 *
+	 * @param {jQuery} $grid jQuery object of grid.
+	 *
+	 * @return {void}
+	 */
+	obj.initState = function( $grid ) {
+		var state = {
+			grid: [],
+			currentRow: 0,
+			currentCol: 0,
+		};
+
+		$grid.data( 'tribeEventsState', state );
+	};
+
+	/**
+	 * Set up grid to state array
+	 *
+	 * @since 4.9.8
+	 *
+	 * @param {jQuery} $grid jQuery object of grid.
+	 *
+	 * @return {void}
+	 */
+	obj.setupGrid = function( $grid ) {
+		var state = $grid.data( 'tribeEventsState' );
+
+		$grid
+			.find( obj.selectors.row )
+			.each( function( rowIndex, row ) {
+				var gridRow = [];
+
+				$( row )
+					.find( obj.selectors.cell )
+					.each( function( colIndex, cell ) {
+						var $cell = $( cell );
+
+						// if cell is focusable (has tabindex attribute)
+						if ( $cell.is( obj.selectors.focusable ) ) {
+							// if cell is focusable and has tabindex of 0
+							if ( $cell.is( obj.selectors.focused ) ) {
+								state.currentRow = state.grid.length;
+								state.currentCol = gridRow.length;
+							}
+
+							// add focusable cell to gridRow
+							gridRow.push( $cell );
+						} else {
+							var $focusableCell = $cell.find( obj.selectors.focusable );
+
+							// if element is focusable (has tabindex attribute)
+							if ( $focusableCell.is( obj.selectors.focusable ) ) {
+								// if element is focusable and has tabindex of 0
+								if ( $cell.is( obj.selectors.focused ) ) {
+									state.currentRow = state.grid.length;
+									state.currentCol = gridRow.length;
+								}
+
+								// add focusable element to gridRow
+								gridRow.push( $focusableCell );
+							}
+						}
+					} );
+
+				// add gridRow to grid if gridRow has focusable cells
+				if ( gridRow.length ) {
+					state.grid.push( gridRow );
+				}
+			} );
+
+		$grid.data( 'tribeEventsState', state );
+	};
+
+	/**
+	 * Unbind events for keydown and click on grid
+	 *
+	 * @since 4.9.5
+	 *
+	 * @param {jQuery} $grid jQuery object of grid.
+	 *
+	 * @return {void}
+	 */
+	obj.unbindEvents = function( $grid ) {
+		$grid.off();
+	};
+
+	/**
+	 * Bind events for keydown and click on grid
+	 *
+	 * @since 4.9.4
+	 *
+	 * @param {jQuery} $grid jQuery object of grid.
+	 *
+	 * @return {void}
+	 */
+	obj.bindEvents = function( $grid ) {
+		$grid
+			.on( 'keydown', { grid: $grid }, obj.handleKeydown )
+			.on( 'click', { grid: $grid }, obj.handleClick );
+	};
+
+	/**
+	 * Deinitialize grid.
+	 *
+	 * @since 4.9.5
+	 *
+	 * @param  {Event}       event    event object for 'beforeAjaxSuccess.tribeEvents' event
+	 * @param  {jqXHR}       jqXHR    Request object
+	 * @param  {PlainObject} settings Settings that this request was made with
+	 *
+	 * @return {void}
+	 */
+	obj.deinit = function( event, jqXHR, settings ) { // eslint-disable-line no-unused-vars
+		var $container = event.data.container;
+		var $grid = $container.find( obj.selectors.grid );
+		obj.unbindEvents( $grid );
+		$container.off( 'beforeAjaxSuccess.tribeEvents', obj.deinit );
+	};
+
+	/**
+	 * Initialize grid.
+	 *
+	 * @since 4.9.8
+	 *
+	 * @param {Event}   event      JS event triggered.
+	 * @param {integer} index      jQuery.each index param from 'afterSetup.tribeEvents' event.
+	 * @param {jQuery}  $container jQuery object of view container.
+	 * @param {object}  data       data object passed from 'afterSetup.tribeEvents' event.
+	 *
+	 * @return {void}
+	 */
+	obj.init = function( event, index, $container, data ) { // eslint-disable-line no-unused-vars
+		var $grid = $container.find( obj.selectors.grid );
+
+		if ( ! $grid.length ) {
+			return;
+		}
+
+		obj.initState( $grid );
+		obj.setupGrid( $grid );
+
+		var state = $grid.data( 'tribeEventsState' );
+
+		obj.setFocusPointer( $grid, state.currentRow, state.currentCol );
+		obj.bindEvents( $grid );
+
+		$container.on( 'beforeAjaxSuccess.tribeEvents', { container: $container }, obj.deinit );
+	};
+
+	/**
+	 * Handles the initialization of the multiday events when Document is ready
+	 *
+	 * @since 4.9.4
+	 *
+	 * @return {void}
+	 */
+	obj.ready = function() {
+		$document.on(
+			'afterSetup.tribeEvents',
+			tribe.events.views.manager.selectors.container,
+			obj.init
+		);
+	};
+
+	// Configure on document ready
+	$( obj.ready );
+} )( jQuery, tribe.events.views.monthGrid );
+;
+/**
+ * Makes sure we have all the required levels on the Tribe Object
+ *
+ * @since 4.9.4
+ *
+ * @type   {PlainObject}
+ */
+tribe.events = tribe.events || {};
+tribe.events.views = tribe.events.views || {};
+
+/**
+ * Configures Month Mobile Events Object in the Global Tribe variable
+ *
+ * @since 4.9.4
+ *
+ * @type   {PlainObject}
+ */
+tribe.events.views.monthMobileEvents = {};
+
+/**
+ * Initializes in a Strict env the code that manages the Event Views
+ *
+ * @since 4.9.4
+ *
+ * @param  {PlainObject} $   jQuery
+ * @param  {PlainObject} obj tribe.events.views.monthMobileEvents
+ *
+ * @return {void}
+ */
+( function( $, obj ) {
+	'use strict';
+	var $document = $( document );
+
+	/**
+	 * Selectors used for configuration and setup
+	 *
+	 * @since 4.9.8
+	 *
+	 * @type {PlainObject}
+	 */
+	obj.selectors = {
+		calendar: '[data-js="tribe-events-month-grid"]',
+		calendarDay: '[data-js="tribe-events-calendar-month-day-cell-mobile"]',
+		calendarDaySelectedClass: '.tribe-events-calendar-month__day-cell--selected',
+		mobileEvents: '[data-js="tribe-events-calendar-month-mobile-events"]',
+		mobileEventsMobileDayShowClass: '.tribe-events-calendar-month-mobile-events__mobile-day--show',
+		mobileEventsDefaultNotices: '.tribe-events-header__messages--mobile:not(.tribe-events-header__messages--day)', // eslint-disable-line max-len
+	};
+
+	/**
+	 * Closes all mobile events
+	 *
+	 * @since 4.9.4
+	 *
+	 * @param {jQuery} $container jQuery object of view container
+	 *
+	 * @return {void}
+	 */
+	obj.closeAllEvents = function( $container ) {
+		$container.find( obj.selectors.calendarDay ).each( function( index, header ) {
+			var $header = $( header );
+			var contentId = $header.attr( 'aria-controls' );
+
+			/**
+			 * Define empty jQuery object in the case contentId is false or undefined
+			 * so that we don't get selectors like #false or #undefined.
+			 * Also only perform accordion actions if header has aria-controls attribute.
+			 */
+			var $content = $( '' );
+			if ( contentId ) {
+				$content = $container.find( '#' + contentId );
+				tribe.events.views.accordion.closeAccordion( $header, $content );
+			}
+
+			obj.closeMobileEvents( $header, $content );
+		} );
+	};
+
+
+	/**
+	 * Handle the display state of the default "No events found in month" messages.
+	 *
+	 * @param {jQuery} $container jQuery object of view container
+	 * @param {bool} showDefaultNotices Whether to show or hide the default notices, if no day is selected.
+	 */
+	obj.handleMobileDayClick = function( $container, showDefaultNotices ) {
+		var $defaultNotices = $container.find( obj.selectors.mobileEventsDefaultNotices );
+		var daySelected = $container.find( obj.selectors.mobileEventsMobileDayShowClass ).length > 0;
+
+		if ( showDefaultNotices && ! daySelected ) {
+			$defaultNotices.removeClass( 'tribe-common-a11y-hidden' );
+		} else {
+			$defaultNotices.addClass( 'tribe-common-a11y-hidden' );
+		}
+	};
+
+	/**
+	 * Opens mobile events
+	 *
+	 * @since 4.9.8
+	 *
+	 * @param {jQuery} $header jQuery object of mobile day button
+	 * @param {jQuery} $content jQuery object of mobile events container
+	 *
+	 * @return {void}
+	 */
+	obj.openMobileEvents = function( $header, $content ) {
+		// only perform accordion actions if $header has aria-controls attribute.
+		var contentId = $header.attr( 'aria-controls' );
+		if ( contentId ) {
+			tribe.events.views.accordion.openAccordion( $header, $content );
+		}
+
+		$header.addClass( obj.selectors.calendarDaySelectedClass.className() );
+		$content.addClass( obj.selectors.mobileEventsMobileDayShowClass.className() );
+	};
+
+	/**
+	 * Closes mobile events
+	 *
+	 * @since 4.9.8
+	 *
+	 * @param {jQuery} $header jQuery object of mobile day button
+	 * @param {jQuery} $content jQuery object of mobile events container
+	 *
+	 * @return {void}
+	 */
+	obj.closeMobileEvents = function( $header, $content ) {
+		// only perform accordion actions if $header has aria-controls attribute.
+		var contentId = $header.attr( 'aria-controls' );
+		if ( contentId ) {
+			tribe.events.views.accordion.closeAccordion( $header, $content );
+		}
+
+		$header.removeClass( obj.selectors.calendarDaySelectedClass.className() );
+		$content.removeClass( obj.selectors.mobileEventsMobileDayShowClass.className() );
+	};
+
+	/**
+	 * Toggles mobile events on mobile day click
+	 *
+	 * @since 4.9.4
+	 *
+	 * @param {Event} event event object of click event
+	 *
+	 * @return {void}
+	 */
+	obj.toggleMobileEvents = function( event ) {
+		var $container = event.data.container;
+		var $header = $( event.data.target );
+		var contentId = $header.attr( 'aria-controls' );
+
+		/**
+		 * Define empty jQuery object in the case contentId is false or undefined
+		 * so that we don't get selectors like #false or #undefined.
+		 */
+		var $content = $( '' );
+		if ( contentId ) {
+			$content = $container.find( '#' + contentId );
+		}
+
+		if ( $header.hasClass( obj.selectors.calendarDaySelectedClass.className() ) ) {
+			obj.closeMobileEvents( $header, $content );
+			obj.handleMobileDayClick( $container, true );
+		} else {
+			obj.closeAllEvents( $container );
+			obj.handleMobileDayClick( $container, false );
+			obj.openMobileEvents( $header, $content );
+		}
+	};
+
+	/**
+	 * Unbinds events for calendar
+	 *
+	 * @since 4.9.4
+	 *
+	 * @param {jQuery} $container jQuery object of view container
+	 *
+	 * @return {void}
+	 */
+	obj.unbindCalendarEvents = function( $container ) {
+		var $calendar = $container.find( obj.selectors.calendar );
+		$calendar
+			.find( obj.selectors.calendarDay )
+			.each( function( index, day ) {
+				$( day ).off( 'click', obj.toggleMobileEvents );
+			} );
+	};
+
+	/**
+	 * Binds events for calendar
+	 *
+	 * @since 4.9.5
+	 *
+	 * @param {jQuery} $container jQuery object of view container
+	 *
+	 * @return {void}
+	 */
+	obj.bindCalendarEvents = function( $container ) {
+		var $calendar = $container.find( obj.selectors.calendar );
+		$calendar
+			.find( obj.selectors.calendarDay )
+			.each( function( index, day ) {
+				$( day ).on( 'click', {
+					target: day,
+					container: $container,
+					calendar: $calendar,
+				}, obj.toggleMobileEvents );
+			} );
+	};
+
+	/**
+	 * Initializes mobile events state
+	 *
+	 * @since 4.9.8
+	 *
+	 * @param {jQuery} $container jQuery object of view container
+	 *
+	 * @return {void}
+	 */
+	obj.initState = function( $container ) {
+		var $mobileEvents = $container.find( obj.selectors.mobileEvents );
+		var containerState = $container.data( 'tribeEventsState' );
+		var isMobile = containerState.isMobile;
+
+		var state = {
+			desktopInitialized: ! isMobile,
+		};
+
+		$mobileEvents.data( 'tribeEventsState', state );
+	};
+
+	/**
+	 * Handles resize event
+	 *
+	 * @since 4.9.8
+	 *
+	 * @param {Event} event event object for 'beforeAjaxSuccess.tribeEvents' event
+	 *
+	 * @return {void}
+	 */
+	obj.handleResize = function( event ) {
+		var $container = event.data.container;
+		var $mobileEvents = $container.find( obj.selectors.mobileEvents );
+		var state = $mobileEvents.data( 'tribeEventsState' );
+		var containerState = $container.data( 'tribeEventsState' );
+		var isMobile = containerState.isMobile;
+
+		if ( ! isMobile ) {
+			if ( ! state.desktopInitialized ) {
+				obj.closeAllEvents( $container );
+				state.desktopInitialized = true;
+			}
+		} else {
+			obj.handleMobileDayClick( $container, true );
+
+			if ( state.desktopInitialized ) {
+				state.desktopInitialized = false;
+			}
+		}
+
+		$mobileEvents.data( 'tribeEventsState', state );
+	};
+
+	/**
+	 * Deinitializes mobile days
+	 *
+	 * @since 4.9.8
+	 *
+	 * @param  {Event}       event    event object for 'beforeAjaxSuccess.tribeEvents' event
+	 * @param  {jqXHR}       jqXHR    Request object
+	 * @param  {PlainObject} settings Settings that this request was made with
+	 *
+	 * @return {void}
+	 */
+	obj.deinit = function( event, jqXHR, settings ) { // eslint-disable-line no-unused-vars
+		var $container = event.data.container;
+		obj.unbindCalendarEvents( $container );
+		$container
+			.off( 'resize.tribeEvents', obj.handleResize )
+			.off( 'beforeAjaxSuccess.tribeEvents', obj.deinit );
+	};
+
+	/**
+	 * Initializes mobile days
+	 *
+	 * @since 4.9.8
+	 *
+	 * @param  {Event}   event      event object for 'afterSetup.tribeEvents' event
+	 * @param  {integer} index      jQuery.each index param from 'afterSetup.tribeEvents' event
+	 * @param  {jQuery}  $container jQuery object of view container
+	 * @param  {object}  data       data object passed from 'afterSetup.tribeEvents' event
+	 *
+	 * @return {void}
+	 */
+	obj.init = function( event, index, $container, data ) { // eslint-disable-line no-unused-vars
+		var $mobileEvents = $container.find( obj.selectors.mobileEvents );
+
+		if ( ! $mobileEvents.length ) {
+			return;
+		}
+
+		obj.handleMobileDayClick( $container, true );
+		obj.initState( $container );
+		obj.bindCalendarEvents( $container );
+		$container
+			.on( 'resize.tribeEvents', { container: $container }, obj.handleResize )
+			.on( 'beforeAjaxSuccess.tribeEvents', { container: $container }, obj.deinit );
+	};
+
+	/**
+	 * Handles the initialization of the mobile days when Document is ready
+	 *
+	 * @since 4.9.4
+	 *
+	 * @return {void}
+	 */
+	obj.ready = function() {
+		$document.on(
+			'afterSetup.tribeEvents',
+			tribe.events.views.manager.selectors.container,
+			obj.init
+		);
+	};
+
+	// Configure on document ready
+	$( obj.ready );
+} )( jQuery, tribe.events.views.monthMobileEvents );
+;
+/**
+ * Makes sure we have all the required levels on the Tribe Object
+ *
+ * @since 4.9.4
+ *
+ * @type   {PlainObject}
+ */
+tribe.events = tribe.events || {};
+tribe.events.views = tribe.events.views || {};
+
+/**
+ * Configures Events Bar Inputs Object in the Global Tribe variable
+ *
+ * @since 4.9.4
+ *
+ * @type   {PlainObject}
+ */
+tribe.events.views.eventsBarInputs = {};
+
+/**
+ * Initializes in a Strict env the code that manages the Event Views
+ *
+ * @since 4.9.4
+ *
+ * @param  {PlainObject} $   jQuery
+ * @param  {PlainObject} obj tribe.events.views.eventsBarInputs
+ *
+ * @return {void}
+ */
+( function( $, obj ) {
+	'use strict';
+	var $document = $( document );
+
+	/**
+	 * Selectors used for configuration and setup
+	 *
+	 * @since 4.9.4
+	 *
+	 * @type {PlainObject}
+	 */
+	obj.selectors = {
+		input: '[data-js="tribe-events-events-bar-input-control-input"]',
+		inputWrapper: '[data-js="tribe-events-events-bar-input-control"]',
+	};
+
+	/**
+	 * Toggles input class if it has a value
+	 *
+	 * @since 4.9.4
+	 *
+	 * @param {Event} event event object of click event
+	 *
+	 * @return {void}
+	 */
+	obj.handleInputChange = function( event ) {
+		var $input = event.data.target;
+		var $wrapper = event.data.wrapper;
+
+		// Set the focus class if it has content.
+		$wrapper.toggleClass( event.data.inputClassFocus, '' !== $input.val().trim() );
+	};
+
+	/**
+	 * Unbind events for the events bar input.
+	 *
+	 * @since 4.9.5
+	 *
+	 * @param {jQuery} $container jQuery object of container.
+	 *
+	 * @return {void}
+	 */
+	obj.unbindInputEvents = function( $container ) {
+		$container
+			.find( obj.selectors.inputWrapper )
+			.each( function( index, wrapper ) {
+				var $input = $( wrapper ).find( obj.selectors.input );
+
+				// Bail in case we dont find the input.
+				if ( ! $input.length ) {
+					return;
+				}
+
+				$input.off();
+			} );
+	};
+
+	/**
+	 * Bind events for the events bar input, on focus and according to their value.
+	 *
+	 * @since 4.9.4
+	 *
+	 * @param {jQuery} $container jQuery object of container.
+	 *
+	 * @return {void}
+	 */
+	obj.bindInputEvents = function( $container ) {
+		$container
+			.find( obj.selectors.inputWrapper )
+			.each( function( index, wrapper ) {
+				var inputWrapperClass = wrapper
+					.className
+					.match( /tribe-events-c-search__input-control--[a-z]+/ );
+
+				if ( ! inputWrapperClass ) {
+					return;
+				}
+
+				var inputWrapperFocus = inputWrapperClass[0] + '-focus';
+				var $wrapper = $( wrapper );
+				var $input = $wrapper.find( obj.selectors.input );
+
+				// Bail in case we dont find the input.
+				if ( ! $input.length ) {
+					return;
+				}
+
+				$wrapper.toggleClass( inputWrapperFocus, '' !== $input.val().trim() );
+
+				$input.on(
+					'change',
+					{ target: $input, wrapper: $wrapper, inputClassFocus: inputWrapperFocus },
+					obj.handleInputChange
+				);
+			} );
+	};
+
+	/**
+	 * Unbinds events for container
+	 *
+	 * @since  4.9.5
+	 *
+	 * @param  {Event}       event    event object for 'beforeAjaxSuccess.tribeEvents' event
+	 * @param  {jqXHR}       jqXHR    Request object
+	 * @param  {PlainObject} settings Settings that this request was made with
+	 *
+	 * @return {void}
+	 */
+	obj.unbindEvents = function( event, jqXHR, settings ) { // eslint-disable-line no-unused-vars
+		var $container = event.data.container;
+		obj.unbindInputEvents( $container );
+		$container.off( 'beforeAjaxSuccess.tribeEvents', obj.unbindEvents );
+	};
+
+	/**
+	 * Binds events for the events bar input change listeners
+	 *
+	 * @since 4.9.8
+	 *
+	 * @param  {Event}   event      event object for 'afterSetup.tribeEvents' event
+	 * @param  {integer} index      jQuery.each index param from 'afterSetup.tribeEvents' event
+	 * @param  {jQuery}  $container jQuery object of view container
+	 * @param  {object}  data       data object passed from 'afterSetup.tribeEvents' event
+	 *
+	 * @return {void}
+	 */
+	obj.bindEvents = function( event, index, $container, data ) { // eslint-disable-line no-unused-vars, max-len
+		var $inputWrapper = $container.find( obj.selectors.inputWrapper );
+
+		if ( ! $inputWrapper.length ) {
+			return;
+		}
+
+		obj.bindInputEvents( $container );
+		$container.on( 'beforeAjaxSuccess.tribeEvents', { container: $container }, obj.unbindEvents );
+	};
+
+	/**
+	 * Handles the initialization of the Events Bar Inputs when Document is ready
+	 *
+	 * @since 4.9.4
+	 *
+	 * @return {void}
+	 */
+	obj.ready = function() {
+		$document.on(
+			'afterSetup.tribeEvents',
+			tribe.events.views.manager.selectors.container,
+			obj.bindEvents
+		);
+	};
+
+	// Configure on document ready
+	$( obj.ready );
+} )( jQuery, tribe.events.views.eventsBarInputs );
+;
+/*! tooltipster v4.2.6 */!function(a,b){"function"==typeof define&&define.amd?define(["jquery"],function(a){return b(a)}):"object"==typeof exports?module.exports=b(require("jquery")):b(jQuery)}(this,function(a){function b(a){this.$container,this.constraints=null,this.__$tooltip,this.__init(a)}function c(b,c){var d=!0;return a.each(b,function(a,e){return void 0===c[a]||b[a]!==c[a]?(d=!1,!1):void 0}),d}function d(b){var c=b.attr("id"),d=c?h.window.document.getElementById(c):null;return d?d===b[0]:a.contains(h.window.document.body,b[0])}function e(){if(!g)return!1;var a=g.document.body||g.document.documentElement,b=a.style,c="transition",d=["Moz","Webkit","Khtml","O","ms"];if("string"==typeof b[c])return!0;c=c.charAt(0).toUpperCase()+c.substr(1);for(var e=0;e<d.length;e++)if("string"==typeof b[d[e]+c])return!0;return!1}var f={animation:"fade",animationDuration:350,content:null,contentAsHTML:!1,contentCloning:!1,debug:!0,delay:300,delayTouch:[300,500],functionInit:null,functionBefore:null,functionReady:null,functionAfter:null,functionFormat:null,IEmin:6,interactive:!1,multiple:!1,parent:null,plugins:["sideTip"],repositionOnScroll:!1,restoration:"none",selfDestruction:!0,theme:[],timer:0,trackerInterval:500,trackOrigin:!1,trackTooltip:!1,trigger:"hover",triggerClose:{click:!1,mouseleave:!1,originClick:!1,scroll:!1,tap:!1,touchleave:!1},triggerOpen:{click:!1,mouseenter:!1,tap:!1,touchstart:!1},updateAnimation:"rotate",zIndex:9999999},g="undefined"!=typeof window?window:null,h={hasTouchCapability:!(!g||!("ontouchstart"in g||g.DocumentTouch&&g.document instanceof g.DocumentTouch||g.navigator.maxTouchPoints)),hasTransitions:e(),IE:!1,semVer:"4.2.6",window:g},i=function(){this.__$emitterPrivate=a({}),this.__$emitterPublic=a({}),this.__instancesLatestArr=[],this.__plugins={},this._env=h};i.prototype={__bridge:function(b,c,d){if(!c[d]){var e=function(){};e.prototype=b;var g=new e;g.__init&&g.__init(c),a.each(b,function(a,b){0!=a.indexOf("__")&&(c[a]?f.debug&&console.log("The "+a+" method of the "+d+" plugin conflicts with another plugin or native methods"):(c[a]=function(){return g[a].apply(g,Array.prototype.slice.apply(arguments))},c[a].bridged=g))}),c[d]=g}return this},__setWindow:function(a){return h.window=a,this},_getRuler:function(a){return new b(a)},_off:function(){return this.__$emitterPrivate.off.apply(this.__$emitterPrivate,Array.prototype.slice.apply(arguments)),this},_on:function(){return this.__$emitterPrivate.on.apply(this.__$emitterPrivate,Array.prototype.slice.apply(arguments)),this},_one:function(){return this.__$emitterPrivate.one.apply(this.__$emitterPrivate,Array.prototype.slice.apply(arguments)),this},_plugin:function(b){var c=this;if("string"==typeof b){var d=b,e=null;return d.indexOf(".")>0?e=c.__plugins[d]:a.each(c.__plugins,function(a,b){return b.name.substring(b.name.length-d.length-1)=="."+d?(e=b,!1):void 0}),e}if(b.name.indexOf(".")<0)throw new Error("Plugins must be namespaced");return c.__plugins[b.name]=b,b.core&&c.__bridge(b.core,c,b.name),this},_trigger:function(){var a=Array.prototype.slice.apply(arguments);return"string"==typeof a[0]&&(a[0]={type:a[0]}),this.__$emitterPrivate.trigger.apply(this.__$emitterPrivate,a),this.__$emitterPublic.trigger.apply(this.__$emitterPublic,a),this},instances:function(b){var c=[],d=b||".tooltipstered";return a(d).each(function(){var b=a(this),d=b.data("tooltipster-ns");d&&a.each(d,function(a,d){c.push(b.data(d))})}),c},instancesLatest:function(){return this.__instancesLatestArr},off:function(){return this.__$emitterPublic.off.apply(this.__$emitterPublic,Array.prototype.slice.apply(arguments)),this},on:function(){return this.__$emitterPublic.on.apply(this.__$emitterPublic,Array.prototype.slice.apply(arguments)),this},one:function(){return this.__$emitterPublic.one.apply(this.__$emitterPublic,Array.prototype.slice.apply(arguments)),this},origins:function(b){var c=b?b+" ":"";return a(c+".tooltipstered").toArray()},setDefaults:function(b){return a.extend(f,b),this},triggerHandler:function(){return this.__$emitterPublic.triggerHandler.apply(this.__$emitterPublic,Array.prototype.slice.apply(arguments)),this}},a.tooltipster=new i,a.Tooltipster=function(b,c){this.__callbacks={close:[],open:[]},this.__closingTime,this.__Content,this.__contentBcr,this.__destroyed=!1,this.__$emitterPrivate=a({}),this.__$emitterPublic=a({}),this.__enabled=!0,this.__garbageCollector,this.__Geometry,this.__lastPosition,this.__namespace="tooltipster-"+Math.round(1e6*Math.random()),this.__options,this.__$originParents,this.__pointerIsOverOrigin=!1,this.__previousThemes=[],this.__state="closed",this.__timeouts={close:[],open:null},this.__touchEvents=[],this.__tracker=null,this._$origin,this._$tooltip,this.__init(b,c)},a.Tooltipster.prototype={__init:function(b,c){var d=this;if(d._$origin=a(b),d.__options=a.extend(!0,{},f,c),d.__optionsFormat(),!h.IE||h.IE>=d.__options.IEmin){var e=null;if(void 0===d._$origin.data("tooltipster-initialTitle")&&(e=d._$origin.attr("title"),void 0===e&&(e=null),d._$origin.data("tooltipster-initialTitle",e)),null!==d.__options.content)d.__contentSet(d.__options.content);else{var g,i=d._$origin.attr("data-tooltip-content");i&&(g=a(i)),g&&g[0]?d.__contentSet(g.first()):d.__contentSet(e)}d._$origin.removeAttr("title").addClass("tooltipstered"),d.__prepareOrigin(),d.__prepareGC(),a.each(d.__options.plugins,function(a,b){d._plug(b)}),h.hasTouchCapability&&a(h.window.document.body).on("touchmove."+d.__namespace+"-triggerOpen",function(a){d._touchRecordEvent(a)}),d._on("created",function(){d.__prepareTooltip()})._on("repositioned",function(a){d.__lastPosition=a.position})}else d.__options.disabled=!0},__contentInsert:function(){var a=this,b=a._$tooltip.find(".tooltipster-content"),c=a.__Content,d=function(a){c=a};return a._trigger({type:"format",content:a.__Content,format:d}),a.__options.functionFormat&&(c=a.__options.functionFormat.call(a,a,{origin:a._$origin[0]},a.__Content)),"string"!=typeof c||a.__options.contentAsHTML?b.empty().append(c):b.text(c),a},__contentSet:function(b){return b instanceof a&&this.__options.contentCloning&&(b=b.clone(!0)),this.__Content=b,this._trigger({type:"updated",content:b}),this},__destroyError:function(){throw new Error("This tooltip has been destroyed and cannot execute your method call.")},__geometry:function(){var b=this,c=b._$origin,d=b._$origin.is("area");if(d){var e=b._$origin.parent().attr("name");c=a('img[usemap="#'+e+'"]')}var f=c[0].getBoundingClientRect(),g=a(h.window.document),i=a(h.window),j=c,k={available:{document:null,window:null},document:{size:{height:g.height(),width:g.width()}},window:{scroll:{left:h.window.scrollX||h.window.document.documentElement.scrollLeft,top:h.window.scrollY||h.window.document.documentElement.scrollTop},size:{height:i.height(),width:i.width()}},origin:{fixedLineage:!1,offset:{},size:{height:f.bottom-f.top,width:f.right-f.left},usemapImage:d?c[0]:null,windowOffset:{bottom:f.bottom,left:f.left,right:f.right,top:f.top}}};if(d){var l=b._$origin.attr("shape"),m=b._$origin.attr("coords");if(m&&(m=m.split(","),a.map(m,function(a,b){m[b]=parseInt(a)})),"default"!=l)switch(l){case"circle":var n=m[0],o=m[1],p=m[2],q=o-p,r=n-p;k.origin.size.height=2*p,k.origin.size.width=k.origin.size.height,k.origin.windowOffset.left+=r,k.origin.windowOffset.top+=q;break;case"rect":var s=m[0],t=m[1],u=m[2],v=m[3];k.origin.size.height=v-t,k.origin.size.width=u-s,k.origin.windowOffset.left+=s,k.origin.windowOffset.top+=t;break;case"poly":for(var w=0,x=0,y=0,z=0,A="even",B=0;B<m.length;B++){var C=m[B];"even"==A?(C>y&&(y=C,0===B&&(w=y)),w>C&&(w=C),A="odd"):(C>z&&(z=C,1==B&&(x=z)),x>C&&(x=C),A="even")}k.origin.size.height=z-x,k.origin.size.width=y-w,k.origin.windowOffset.left+=w,k.origin.windowOffset.top+=x}}var D=function(a){k.origin.size.height=a.height,k.origin.windowOffset.left=a.left,k.origin.windowOffset.top=a.top,k.origin.size.width=a.width};for(b._trigger({type:"geometry",edit:D,geometry:{height:k.origin.size.height,left:k.origin.windowOffset.left,top:k.origin.windowOffset.top,width:k.origin.size.width}}),k.origin.windowOffset.right=k.origin.windowOffset.left+k.origin.size.width,k.origin.windowOffset.bottom=k.origin.windowOffset.top+k.origin.size.height,k.origin.offset.left=k.origin.windowOffset.left+k.window.scroll.left,k.origin.offset.top=k.origin.windowOffset.top+k.window.scroll.top,k.origin.offset.bottom=k.origin.offset.top+k.origin.size.height,k.origin.offset.right=k.origin.offset.left+k.origin.size.width,k.available.document={bottom:{height:k.document.size.height-k.origin.offset.bottom,width:k.document.size.width},left:{height:k.document.size.height,width:k.origin.offset.left},right:{height:k.document.size.height,width:k.document.size.width-k.origin.offset.right},top:{height:k.origin.offset.top,width:k.document.size.width}},k.available.window={bottom:{height:Math.max(k.window.size.height-Math.max(k.origin.windowOffset.bottom,0),0),width:k.window.size.width},left:{height:k.window.size.height,width:Math.max(k.origin.windowOffset.left,0)},right:{height:k.window.size.height,width:Math.max(k.window.size.width-Math.max(k.origin.windowOffset.right,0),0)},top:{height:Math.max(k.origin.windowOffset.top,0),width:k.window.size.width}};"html"!=j[0].tagName.toLowerCase();){if("fixed"==j.css("position")){k.origin.fixedLineage=!0;break}j=j.parent()}return k},__optionsFormat:function(){return"number"==typeof this.__options.animationDuration&&(this.__options.animationDuration=[this.__options.animationDuration,this.__options.animationDuration]),"number"==typeof this.__options.delay&&(this.__options.delay=[this.__options.delay,this.__options.delay]),"number"==typeof this.__options.delayTouch&&(this.__options.delayTouch=[this.__options.delayTouch,this.__options.delayTouch]),"string"==typeof this.__options.theme&&(this.__options.theme=[this.__options.theme]),null===this.__options.parent?this.__options.parent=a(h.window.document.body):"string"==typeof this.__options.parent&&(this.__options.parent=a(this.__options.parent)),"hover"==this.__options.trigger?(this.__options.triggerOpen={mouseenter:!0,touchstart:!0},this.__options.triggerClose={mouseleave:!0,originClick:!0,touchleave:!0}):"click"==this.__options.trigger&&(this.__options.triggerOpen={click:!0,tap:!0},this.__options.triggerClose={click:!0,tap:!0}),this._trigger("options"),this},__prepareGC:function(){var b=this;return b.__options.selfDestruction?b.__garbageCollector=setInterval(function(){var c=(new Date).getTime();b.__touchEvents=a.grep(b.__touchEvents,function(a,b){return c-a.time>6e4}),d(b._$origin)||b.close(function(){b.destroy()})},2e4):clearInterval(b.__garbageCollector),b},__prepareOrigin:function(){var a=this;if(a._$origin.off("."+a.__namespace+"-triggerOpen"),h.hasTouchCapability&&a._$origin.on("touchstart."+a.__namespace+"-triggerOpen touchend."+a.__namespace+"-triggerOpen touchcancel."+a.__namespace+"-triggerOpen",function(b){a._touchRecordEvent(b)}),a.__options.triggerOpen.click||a.__options.triggerOpen.tap&&h.hasTouchCapability){var b="";a.__options.triggerOpen.click&&(b+="click."+a.__namespace+"-triggerOpen "),a.__options.triggerOpen.tap&&h.hasTouchCapability&&(b+="touchend."+a.__namespace+"-triggerOpen"),a._$origin.on(b,function(b){a._touchIsMeaningfulEvent(b)&&a._open(b)})}if(a.__options.triggerOpen.mouseenter||a.__options.triggerOpen.touchstart&&h.hasTouchCapability){var b="";a.__options.triggerOpen.mouseenter&&(b+="mouseenter."+a.__namespace+"-triggerOpen "),a.__options.triggerOpen.touchstart&&h.hasTouchCapability&&(b+="touchstart."+a.__namespace+"-triggerOpen"),a._$origin.on(b,function(b){!a._touchIsTouchEvent(b)&&a._touchIsEmulatedEvent(b)||(a.__pointerIsOverOrigin=!0,a._openShortly(b))})}if(a.__options.triggerClose.mouseleave||a.__options.triggerClose.touchleave&&h.hasTouchCapability){var b="";a.__options.triggerClose.mouseleave&&(b+="mouseleave."+a.__namespace+"-triggerOpen "),a.__options.triggerClose.touchleave&&h.hasTouchCapability&&(b+="touchend."+a.__namespace+"-triggerOpen touchcancel."+a.__namespace+"-triggerOpen"),a._$origin.on(b,function(b){a._touchIsMeaningfulEvent(b)&&(a.__pointerIsOverOrigin=!1)})}return a},__prepareTooltip:function(){var b=this,c=b.__options.interactive?"auto":"";return b._$tooltip.attr("id",b.__namespace).css({"pointer-events":c,zIndex:b.__options.zIndex}),a.each(b.__previousThemes,function(a,c){b._$tooltip.removeClass(c)}),a.each(b.__options.theme,function(a,c){b._$tooltip.addClass(c)}),b.__previousThemes=a.merge([],b.__options.theme),b},__scrollHandler:function(b){var c=this;if(c.__options.triggerClose.scroll)c._close(b);else if(d(c._$origin)&&d(c._$tooltip)){var e=null;if(b.target===h.window.document)c.__Geometry.origin.fixedLineage||c.__options.repositionOnScroll&&c.reposition(b);else{e=c.__geometry();var f=!1;if("fixed"!=c._$origin.css("position")&&c.__$originParents.each(function(b,c){var d=a(c),g=d.css("overflow-x"),h=d.css("overflow-y");if("visible"!=g||"visible"!=h){var i=c.getBoundingClientRect();if("visible"!=g&&(e.origin.windowOffset.left<i.left||e.origin.windowOffset.right>i.right))return f=!0,!1;if("visible"!=h&&(e.origin.windowOffset.top<i.top||e.origin.windowOffset.bottom>i.bottom))return f=!0,!1}return"fixed"==d.css("position")?!1:void 0}),f)c._$tooltip.css("visibility","hidden");else if(c._$tooltip.css("visibility","visible"),c.__options.repositionOnScroll)c.reposition(b);else{var g=e.origin.offset.left-c.__Geometry.origin.offset.left,i=e.origin.offset.top-c.__Geometry.origin.offset.top;c._$tooltip.css({left:c.__lastPosition.coord.left+g,top:c.__lastPosition.coord.top+i})}}c._trigger({type:"scroll",event:b,geo:e})}return c},__stateSet:function(a){return this.__state=a,this._trigger({type:"state",state:a}),this},__timeoutsClear:function(){return clearTimeout(this.__timeouts.open),this.__timeouts.open=null,a.each(this.__timeouts.close,function(a,b){clearTimeout(b)}),this.__timeouts.close=[],this},__trackerStart:function(){var a=this,b=a._$tooltip.find(".tooltipster-content");return a.__options.trackTooltip&&(a.__contentBcr=b[0].getBoundingClientRect()),a.__tracker=setInterval(function(){if(d(a._$origin)&&d(a._$tooltip)){if(a.__options.trackOrigin){var e=a.__geometry(),f=!1;c(e.origin.size,a.__Geometry.origin.size)&&(a.__Geometry.origin.fixedLineage?c(e.origin.windowOffset,a.__Geometry.origin.windowOffset)&&(f=!0):c(e.origin.offset,a.__Geometry.origin.offset)&&(f=!0)),f||(a.__options.triggerClose.mouseleave?a._close():a.reposition())}if(a.__options.trackTooltip){var g=b[0].getBoundingClientRect();g.height===a.__contentBcr.height&&g.width===a.__contentBcr.width||(a.reposition(),a.__contentBcr=g)}}else a._close()},a.__options.trackerInterval),a},_close:function(b,c,d){var e=this,f=!0;if(e._trigger({type:"close",event:b,stop:function(){f=!1}}),f||d){c&&e.__callbacks.close.push(c),e.__callbacks.open=[],e.__timeoutsClear();var g=function(){a.each(e.__callbacks.close,function(a,c){c.call(e,e,{event:b,origin:e._$origin[0]})}),e.__callbacks.close=[]};if("closed"!=e.__state){var i=!0,j=new Date,k=j.getTime(),l=k+e.__options.animationDuration[1];if("disappearing"==e.__state&&l>e.__closingTime&&e.__options.animationDuration[1]>0&&(i=!1),i){e.__closingTime=l,"disappearing"!=e.__state&&e.__stateSet("disappearing");var m=function(){clearInterval(e.__tracker),e._trigger({type:"closing",event:b}),e._$tooltip.off("."+e.__namespace+"-triggerClose").removeClass("tooltipster-dying"),a(h.window).off("."+e.__namespace+"-triggerClose"),e.__$originParents.each(function(b,c){a(c).off("scroll."+e.__namespace+"-triggerClose")}),e.__$originParents=null,a(h.window.document.body).off("."+e.__namespace+"-triggerClose"),e._$origin.off("."+e.__namespace+"-triggerClose"),e._off("dismissable"),e.__stateSet("closed"),e._trigger({type:"after",event:b}),e.__options.functionAfter&&e.__options.functionAfter.call(e,e,{event:b,origin:e._$origin[0]}),g()};h.hasTransitions?(e._$tooltip.css({"-moz-animation-duration":e.__options.animationDuration[1]+"ms","-ms-animation-duration":e.__options.animationDuration[1]+"ms","-o-animation-duration":e.__options.animationDuration[1]+"ms","-webkit-animation-duration":e.__options.animationDuration[1]+"ms","animation-duration":e.__options.animationDuration[1]+"ms","transition-duration":e.__options.animationDuration[1]+"ms"}),e._$tooltip.clearQueue().removeClass("tooltipster-show").addClass("tooltipster-dying"),e.__options.animationDuration[1]>0&&e._$tooltip.delay(e.__options.animationDuration[1]),e._$tooltip.queue(m)):e._$tooltip.stop().fadeOut(e.__options.animationDuration[1],m)}}else g()}return e},_off:function(){return this.__$emitterPrivate.off.apply(this.__$emitterPrivate,Array.prototype.slice.apply(arguments)),this},_on:function(){return this.__$emitterPrivate.on.apply(this.__$emitterPrivate,Array.prototype.slice.apply(arguments)),this},_one:function(){return this.__$emitterPrivate.one.apply(this.__$emitterPrivate,Array.prototype.slice.apply(arguments)),this},_open:function(b,c){var e=this;if(!e.__destroying&&d(e._$origin)&&e.__enabled){var f=!0;if("closed"==e.__state&&(e._trigger({type:"before",event:b,stop:function(){f=!1}}),f&&e.__options.functionBefore&&(f=e.__options.functionBefore.call(e,e,{event:b,origin:e._$origin[0]}))),f!==!1&&null!==e.__Content){c&&e.__callbacks.open.push(c),e.__callbacks.close=[],e.__timeoutsClear();var g,i=function(){"stable"!=e.__state&&e.__stateSet("stable"),a.each(e.__callbacks.open,function(a,b){b.call(e,e,{origin:e._$origin[0],tooltip:e._$tooltip[0]})}),e.__callbacks.open=[]};if("closed"!==e.__state)g=0,"disappearing"===e.__state?(e.__stateSet("appearing"),h.hasTransitions?(e._$tooltip.clearQueue().removeClass("tooltipster-dying").addClass("tooltipster-show"),e.__options.animationDuration[0]>0&&e._$tooltip.delay(e.__options.animationDuration[0]),e._$tooltip.queue(i)):e._$tooltip.stop().fadeIn(i)):"stable"==e.__state&&i();else{if(e.__stateSet("appearing"),g=e.__options.animationDuration[0],e.__contentInsert(),e.reposition(b,!0),h.hasTransitions?(e._$tooltip.addClass("tooltipster-"+e.__options.animation).addClass("tooltipster-initial").css({"-moz-animation-duration":e.__options.animationDuration[0]+"ms","-ms-animation-duration":e.__options.animationDuration[0]+"ms","-o-animation-duration":e.__options.animationDuration[0]+"ms","-webkit-animation-duration":e.__options.animationDuration[0]+"ms","animation-duration":e.__options.animationDuration[0]+"ms","transition-duration":e.__options.animationDuration[0]+"ms"}),setTimeout(function(){"closed"!=e.__state&&(e._$tooltip.addClass("tooltipster-show").removeClass("tooltipster-initial"),e.__options.animationDuration[0]>0&&e._$tooltip.delay(e.__options.animationDuration[0]),e._$tooltip.queue(i))},0)):e._$tooltip.css("display","none").fadeIn(e.__options.animationDuration[0],i),e.__trackerStart(),a(h.window).on("resize."+e.__namespace+"-triggerClose",function(b){var c=a(document.activeElement);(c.is("input")||c.is("textarea"))&&a.contains(e._$tooltip[0],c[0])||e.reposition(b)}).on("scroll."+e.__namespace+"-triggerClose",function(a){e.__scrollHandler(a)}),e.__$originParents=e._$origin.parents(),e.__$originParents.each(function(b,c){a(c).on("scroll."+e.__namespace+"-triggerClose",function(a){e.__scrollHandler(a)})}),e.__options.triggerClose.mouseleave||e.__options.triggerClose.touchleave&&h.hasTouchCapability){e._on("dismissable",function(a){a.dismissable?a.delay?(m=setTimeout(function(){e._close(a.event)},a.delay),e.__timeouts.close.push(m)):e._close(a):clearTimeout(m)});var j=e._$origin,k="",l="",m=null;e.__options.interactive&&(j=j.add(e._$tooltip)),e.__options.triggerClose.mouseleave&&(k+="mouseenter."+e.__namespace+"-triggerClose ",l+="mouseleave."+e.__namespace+"-triggerClose "),e.__options.triggerClose.touchleave&&h.hasTouchCapability&&(k+="touchstart."+e.__namespace+"-triggerClose",l+="touchend."+e.__namespace+"-triggerClose touchcancel."+e.__namespace+"-triggerClose"),j.on(l,function(a){if(e._touchIsTouchEvent(a)||!e._touchIsEmulatedEvent(a)){var b="mouseleave"==a.type?e.__options.delay:e.__options.delayTouch;e._trigger({delay:b[1],dismissable:!0,event:a,type:"dismissable"})}}).on(k,function(a){!e._touchIsTouchEvent(a)&&e._touchIsEmulatedEvent(a)||e._trigger({dismissable:!1,event:a,type:"dismissable"})})}e.__options.triggerClose.originClick&&e._$origin.on("click."+e.__namespace+"-triggerClose",function(a){e._touchIsTouchEvent(a)||e._touchIsEmulatedEvent(a)||e._close(a)}),(e.__options.triggerClose.click||e.__options.triggerClose.tap&&h.hasTouchCapability)&&setTimeout(function(){if("closed"!=e.__state){var b="",c=a(h.window.document.body);e.__options.triggerClose.click&&(b+="click."+e.__namespace+"-triggerClose "),e.__options.triggerClose.tap&&h.hasTouchCapability&&(b+="touchend."+e.__namespace+"-triggerClose"),c.on(b,function(b){e._touchIsMeaningfulEvent(b)&&(e._touchRecordEvent(b),e.__options.interactive&&a.contains(e._$tooltip[0],b.target)||e._close(b))}),e.__options.triggerClose.tap&&h.hasTouchCapability&&c.on("touchstart."+e.__namespace+"-triggerClose",function(a){e._touchRecordEvent(a)})}},0),e._trigger("ready"),e.__options.functionReady&&e.__options.functionReady.call(e,e,{origin:e._$origin[0],tooltip:e._$tooltip[0]})}if(e.__options.timer>0){var m=setTimeout(function(){e._close()},e.__options.timer+g);e.__timeouts.close.push(m)}}}return e},_openShortly:function(a){var b=this,c=!0;if("stable"!=b.__state&&"appearing"!=b.__state&&!b.__timeouts.open&&(b._trigger({type:"start",event:a,stop:function(){c=!1}}),c)){var d=0==a.type.indexOf("touch")?b.__options.delayTouch:b.__options.delay;d[0]?b.__timeouts.open=setTimeout(function(){b.__timeouts.open=null,b.__pointerIsOverOrigin&&b._touchIsMeaningfulEvent(a)?(b._trigger("startend"),b._open(a)):b._trigger("startcancel")},d[0]):(b._trigger("startend"),b._open(a))}return b},_optionsExtract:function(b,c){var d=this,e=a.extend(!0,{},c),f=d.__options[b];return f||(f={},a.each(c,function(a,b){var c=d.__options[a];void 0!==c&&(f[a]=c)})),a.each(e,function(b,c){void 0!==f[b]&&("object"!=typeof c||c instanceof Array||null==c||"object"!=typeof f[b]||f[b]instanceof Array||null==f[b]?e[b]=f[b]:a.extend(e[b],f[b]))}),e},_plug:function(b){var c=a.tooltipster._plugin(b);if(!c)throw new Error('The "'+b+'" plugin is not defined');return c.instance&&a.tooltipster.__bridge(c.instance,this,c.name),this},_touchIsEmulatedEvent:function(a){for(var b=!1,c=(new Date).getTime(),d=this.__touchEvents.length-1;d>=0;d--){var e=this.__touchEvents[d];if(!(c-e.time<500))break;e.target===a.target&&(b=!0)}return b},_touchIsMeaningfulEvent:function(a){return this._touchIsTouchEvent(a)&&!this._touchSwiped(a.target)||!this._touchIsTouchEvent(a)&&!this._touchIsEmulatedEvent(a)},_touchIsTouchEvent:function(a){return 0==a.type.indexOf("touch")},_touchRecordEvent:function(a){return this._touchIsTouchEvent(a)&&(a.time=(new Date).getTime(),this.__touchEvents.push(a)),this},_touchSwiped:function(a){for(var b=!1,c=this.__touchEvents.length-1;c>=0;c--){var d=this.__touchEvents[c];if("touchmove"==d.type){b=!0;break}if("touchstart"==d.type&&a===d.target)break}return b},_trigger:function(){var b=Array.prototype.slice.apply(arguments);return"string"==typeof b[0]&&(b[0]={type:b[0]}),b[0].instance=this,b[0].origin=this._$origin?this._$origin[0]:null,b[0].tooltip=this._$tooltip?this._$tooltip[0]:null,this.__$emitterPrivate.trigger.apply(this.__$emitterPrivate,b),a.tooltipster._trigger.apply(a.tooltipster,b),this.__$emitterPublic.trigger.apply(this.__$emitterPublic,b),this},_unplug:function(b){var c=this;if(c[b]){var d=a.tooltipster._plugin(b);d.instance&&a.each(d.instance,function(a,d){c[a]&&c[a].bridged===c[b]&&delete c[a]}),c[b].__destroy&&c[b].__destroy(),delete c[b]}return c},close:function(a){return this.__destroyed?this.__destroyError():this._close(null,a),this},content:function(a){var b=this;if(void 0===a)return b.__Content;if(b.__destroyed)b.__destroyError();else if(b.__contentSet(a),null!==b.__Content){if("closed"!==b.__state&&(b.__contentInsert(),b.reposition(),b.__options.updateAnimation))if(h.hasTransitions){var c=b.__options.updateAnimation;b._$tooltip.addClass("tooltipster-update-"+c),setTimeout(function(){"closed"!=b.__state&&b._$tooltip.removeClass("tooltipster-update-"+c)},1e3)}else b._$tooltip.fadeTo(200,.5,function(){"closed"!=b.__state&&b._$tooltip.fadeTo(200,1)})}else b._close();return b},destroy:function(){var b=this;if(b.__destroyed)b.__destroyError();else{"closed"!=b.__state?b.option("animationDuration",0)._close(null,null,!0):b.__timeoutsClear(),b._trigger("destroy"),b.__destroyed=!0,b._$origin.removeData(b.__namespace).off("."+b.__namespace+"-triggerOpen"),a(h.window.document.body).off("."+b.__namespace+"-triggerOpen");var c=b._$origin.data("tooltipster-ns");if(c)if(1===c.length){var d=null;"previous"==b.__options.restoration?d=b._$origin.data("tooltipster-initialTitle"):"current"==b.__options.restoration&&(d="string"==typeof b.__Content?b.__Content:a("<div></div>").append(b.__Content).html()),d&&b._$origin.attr("title",d),b._$origin.removeClass("tooltipstered"),b._$origin.removeData("tooltipster-ns").removeData("tooltipster-initialTitle")}else c=a.grep(c,function(a,c){return a!==b.__namespace}),b._$origin.data("tooltipster-ns",c);b._trigger("destroyed"),b._off(),b.off(),b.__Content=null,b.__$emitterPrivate=null,b.__$emitterPublic=null,b.__options.parent=null,b._$origin=null,b._$tooltip=null,a.tooltipster.__instancesLatestArr=a.grep(a.tooltipster.__instancesLatestArr,function(a,c){return b!==a}),clearInterval(b.__garbageCollector)}return b},disable:function(){return this.__destroyed?(this.__destroyError(),this):(this._close(),this.__enabled=!1,this)},elementOrigin:function(){return this.__destroyed?void this.__destroyError():this._$origin[0]},elementTooltip:function(){return this._$tooltip?this._$tooltip[0]:null},enable:function(){return this.__enabled=!0,this},hide:function(a){return this.close(a)},instance:function(){return this},off:function(){return this.__destroyed||this.__$emitterPublic.off.apply(this.__$emitterPublic,Array.prototype.slice.apply(arguments)),this},on:function(){return this.__destroyed?this.__destroyError():this.__$emitterPublic.on.apply(this.__$emitterPublic,Array.prototype.slice.apply(arguments)),this},one:function(){return this.__destroyed?this.__destroyError():this.__$emitterPublic.one.apply(this.__$emitterPublic,Array.prototype.slice.apply(arguments)),this},open:function(a){return this.__destroyed?this.__destroyError():this._open(null,a),this},option:function(b,c){return void 0===c?this.__options[b]:(this.__destroyed?this.__destroyError():(this.__options[b]=c,this.__optionsFormat(),a.inArray(b,["trigger","triggerClose","triggerOpen"])>=0&&this.__prepareOrigin(),"selfDestruction"===b&&this.__prepareGC()),this)},reposition:function(a,b){var c=this;return c.__destroyed?c.__destroyError():"closed"!=c.__state&&d(c._$origin)&&(b||d(c._$tooltip))&&(b||c._$tooltip.detach(),c.__Geometry=c.__geometry(),c._trigger({type:"reposition",event:a,helper:{geo:c.__Geometry}})),c},show:function(a){return this.open(a)},status:function(){return{destroyed:this.__destroyed,enabled:this.__enabled,open:"closed"!==this.__state,state:this.__state}},triggerHandler:function(){return this.__destroyed?this.__destroyError():this.__$emitterPublic.triggerHandler.apply(this.__$emitterPublic,Array.prototype.slice.apply(arguments)),this}},a.fn.tooltipster=function(){var b=Array.prototype.slice.apply(arguments),c="You are using a single HTML element as content for several tooltips. You probably want to set the contentCloning option to TRUE.";if(0===this.length)return this;if("string"==typeof b[0]){var d="#*$~&";return this.each(function(){var e=a(this).data("tooltipster-ns"),f=e?a(this).data(e[0]):null;if(!f)throw new Error("You called Tooltipster's \""+b[0]+'" method on an uninitialized element');if("function"!=typeof f[b[0]])throw new Error('Unknown method "'+b[0]+'"');this.length>1&&"content"==b[0]&&(b[1]instanceof a||"object"==typeof b[1]&&null!=b[1]&&b[1].tagName)&&!f.__options.contentCloning&&f.__options.debug&&console.log(c);var g=f[b[0]](b[1],b[2]);return g!==f||"instance"===b[0]?(d=g,!1):void 0}),"#*$~&"!==d?d:this}a.tooltipster.__instancesLatestArr=[];var e=b[0]&&void 0!==b[0].multiple,g=e&&b[0].multiple||!e&&f.multiple,h=b[0]&&void 0!==b[0].content,i=h&&b[0].content||!h&&f.content,j=b[0]&&void 0!==b[0].contentCloning,k=j&&b[0].contentCloning||!j&&f.contentCloning,l=b[0]&&void 0!==b[0].debug,m=l&&b[0].debug||!l&&f.debug;return this.length>1&&(i instanceof a||"object"==typeof i&&null!=i&&i.tagName)&&!k&&m&&console.log(c),this.each(function(){var c=!1,d=a(this),e=d.data("tooltipster-ns"),f=null;e?g?c=!0:m&&(console.log("Tooltipster: one or more tooltips are already attached to the element below. Ignoring."),console.log(this)):c=!0,c&&(f=new a.Tooltipster(this,b[0]),e||(e=[]),e.push(f.__namespace),d.data("tooltipster-ns",e),d.data(f.__namespace,f),f.__options.functionInit&&f.__options.functionInit.call(f,f,{origin:this}),f._trigger("init")),a.tooltipster.__instancesLatestArr.push(f)}),this},b.prototype={__init:function(b){this.__$tooltip=b,this.__$tooltip.css({left:0,overflow:"hidden",position:"absolute",top:0}).find(".tooltipster-content").css("overflow","auto"),this.$container=a('<div class="tooltipster-ruler"></div>').append(this.__$tooltip).appendTo(h.window.document.body)},__forceRedraw:function(){var a=this.__$tooltip.parent();this.__$tooltip.detach(),this.__$tooltip.appendTo(a)},constrain:function(a,b){return this.constraints={width:a,height:b},this.__$tooltip.css({display:"block",height:"",overflow:"auto",width:a}),this},destroy:function(){this.__$tooltip.detach().find(".tooltipster-content").css({display:"",overflow:""}),this.$container.remove()},free:function(){return this.constraints=null,this.__$tooltip.css({display:"",height:"",overflow:"visible",width:""}),this},measure:function(){this.__forceRedraw();var a=this.__$tooltip[0].getBoundingClientRect(),b={size:{height:a.height||a.bottom-a.top,width:a.width||a.right-a.left}};if(this.constraints){var c=this.__$tooltip.find(".tooltipster-content"),d=this.__$tooltip.outerHeight(),e=c[0].getBoundingClientRect(),f={height:d<=this.constraints.height,width:a.width<=this.constraints.width&&e.width>=c[0].scrollWidth-1};b.fits=f.height&&f.width}return h.IE&&h.IE<=11&&b.size.width!==h.window.document.documentElement.clientWidth&&(b.size.width=Math.ceil(b.size.width)+1),b}};var j=navigator.userAgent.toLowerCase();-1!=j.indexOf("msie")?h.IE=parseInt(j.split("msie")[1]):-1!==j.toLowerCase().indexOf("trident")&&-1!==j.indexOf(" rv:11")?h.IE=11:-1!=j.toLowerCase().indexOf("edge/")&&(h.IE=parseInt(j.toLowerCase().split("edge/")[1]));var k="tooltipster.sideTip";return a.tooltipster._plugin({name:k,instance:{__defaults:function(){return{arrow:!0,distance:6,functionPosition:null,maxWidth:null,minIntersection:16,minWidth:0,position:null,side:"top",viewportAware:!0}},__init:function(a){var b=this;b.__instance=a,b.__namespace="tooltipster-sideTip-"+Math.round(1e6*Math.random()),b.__previousState="closed",b.__options,b.__optionsFormat(),b.__instance._on("state."+b.__namespace,function(a){"closed"==a.state?b.__close():"appearing"==a.state&&"closed"==b.__previousState&&b.__create(),b.__previousState=a.state}),b.__instance._on("options."+b.__namespace,function(){b.__optionsFormat()}),b.__instance._on("reposition."+b.__namespace,function(a){b.__reposition(a.event,a.helper)})},__close:function(){this.__instance.content()instanceof a&&this.__instance.content().detach(),this.__instance._$tooltip.remove(),this.__instance._$tooltip=null},__create:function(){var b=a('<div class="tooltipster-base tooltipster-sidetip"><div class="tooltipster-box"><div class="tooltipster-content"></div></div><div class="tooltipster-arrow"><div class="tooltipster-arrow-uncropped"><div class="tooltipster-arrow-border"></div><div class="tooltipster-arrow-background"></div></div></div></div>');this.__options.arrow||b.find(".tooltipster-box").css("margin",0).end().find(".tooltipster-arrow").hide(),this.__options.minWidth&&b.css("min-width",this.__options.minWidth+"px"),this.__options.maxWidth&&b.css("max-width",this.__options.maxWidth+"px"),
+this.__instance._$tooltip=b,this.__instance._trigger("created")},__destroy:function(){this.__instance._off("."+self.__namespace)},__optionsFormat:function(){var b=this;if(b.__options=b.__instance._optionsExtract(k,b.__defaults()),b.__options.position&&(b.__options.side=b.__options.position),"object"!=typeof b.__options.distance&&(b.__options.distance=[b.__options.distance]),b.__options.distance.length<4&&(void 0===b.__options.distance[1]&&(b.__options.distance[1]=b.__options.distance[0]),void 0===b.__options.distance[2]&&(b.__options.distance[2]=b.__options.distance[0]),void 0===b.__options.distance[3]&&(b.__options.distance[3]=b.__options.distance[1]),b.__options.distance={top:b.__options.distance[0],right:b.__options.distance[1],bottom:b.__options.distance[2],left:b.__options.distance[3]}),"string"==typeof b.__options.side){var c={top:"bottom",right:"left",bottom:"top",left:"right"};b.__options.side=[b.__options.side,c[b.__options.side]],"left"==b.__options.side[0]||"right"==b.__options.side[0]?b.__options.side.push("top","bottom"):b.__options.side.push("right","left")}6===a.tooltipster._env.IE&&b.__options.arrow!==!0&&(b.__options.arrow=!1)},__reposition:function(b,c){var d,e=this,f=e.__targetFind(c),g=[];e.__instance._$tooltip.detach();var h=e.__instance._$tooltip.clone(),i=a.tooltipster._getRuler(h),j=!1,k=e.__instance.option("animation");switch(k&&h.removeClass("tooltipster-"+k),a.each(["window","document"],function(d,k){var l=null;if(e.__instance._trigger({container:k,helper:c,satisfied:j,takeTest:function(a){l=a},results:g,type:"positionTest"}),1==l||0!=l&&0==j&&("window"!=k||e.__options.viewportAware))for(var d=0;d<e.__options.side.length;d++){var m={horizontal:0,vertical:0},n=e.__options.side[d];"top"==n||"bottom"==n?m.vertical=e.__options.distance[n]:m.horizontal=e.__options.distance[n],e.__sideChange(h,n),a.each(["natural","constrained"],function(a,d){if(l=null,e.__instance._trigger({container:k,event:b,helper:c,mode:d,results:g,satisfied:j,side:n,takeTest:function(a){l=a},type:"positionTest"}),1==l||0!=l&&0==j){var h={container:k,distance:m,fits:null,mode:d,outerSize:null,side:n,size:null,target:f[n],whole:null},o="natural"==d?i.free():i.constrain(c.geo.available[k][n].width-m.horizontal,c.geo.available[k][n].height-m.vertical),p=o.measure();if(h.size=p.size,h.outerSize={height:p.size.height+m.vertical,width:p.size.width+m.horizontal},"natural"==d?c.geo.available[k][n].width>=h.outerSize.width&&c.geo.available[k][n].height>=h.outerSize.height?h.fits=!0:h.fits=!1:h.fits=p.fits,"window"==k&&(h.fits?"top"==n||"bottom"==n?h.whole=c.geo.origin.windowOffset.right>=e.__options.minIntersection&&c.geo.window.size.width-c.geo.origin.windowOffset.left>=e.__options.minIntersection:h.whole=c.geo.origin.windowOffset.bottom>=e.__options.minIntersection&&c.geo.window.size.height-c.geo.origin.windowOffset.top>=e.__options.minIntersection:h.whole=!1),g.push(h),h.whole)j=!0;else if("natural"==h.mode&&(h.fits||h.size.width<=c.geo.available[k][n].width))return!1}})}}),e.__instance._trigger({edit:function(a){g=a},event:b,helper:c,results:g,type:"positionTested"}),g.sort(function(a,b){if(a.whole&&!b.whole)return-1;if(!a.whole&&b.whole)return 1;if(a.whole&&b.whole){var c=e.__options.side.indexOf(a.side),d=e.__options.side.indexOf(b.side);return d>c?-1:c>d?1:"natural"==a.mode?-1:1}if(a.fits&&!b.fits)return-1;if(!a.fits&&b.fits)return 1;if(a.fits&&b.fits){var c=e.__options.side.indexOf(a.side),d=e.__options.side.indexOf(b.side);return d>c?-1:c>d?1:"natural"==a.mode?-1:1}return"document"==a.container&&"bottom"==a.side&&"natural"==a.mode?-1:1}),d=g[0],d.coord={},d.side){case"left":case"right":d.coord.top=Math.floor(d.target-d.size.height/2);break;case"bottom":case"top":d.coord.left=Math.floor(d.target-d.size.width/2)}switch(d.side){case"left":d.coord.left=c.geo.origin.windowOffset.left-d.outerSize.width;break;case"right":d.coord.left=c.geo.origin.windowOffset.right+d.distance.horizontal;break;case"top":d.coord.top=c.geo.origin.windowOffset.top-d.outerSize.height;break;case"bottom":d.coord.top=c.geo.origin.windowOffset.bottom+d.distance.vertical}"window"==d.container?"top"==d.side||"bottom"==d.side?d.coord.left<0?c.geo.origin.windowOffset.right-this.__options.minIntersection>=0?d.coord.left=0:d.coord.left=c.geo.origin.windowOffset.right-this.__options.minIntersection-1:d.coord.left>c.geo.window.size.width-d.size.width&&(c.geo.origin.windowOffset.left+this.__options.minIntersection<=c.geo.window.size.width?d.coord.left=c.geo.window.size.width-d.size.width:d.coord.left=c.geo.origin.windowOffset.left+this.__options.minIntersection+1-d.size.width):d.coord.top<0?c.geo.origin.windowOffset.bottom-this.__options.minIntersection>=0?d.coord.top=0:d.coord.top=c.geo.origin.windowOffset.bottom-this.__options.minIntersection-1:d.coord.top>c.geo.window.size.height-d.size.height&&(c.geo.origin.windowOffset.top+this.__options.minIntersection<=c.geo.window.size.height?d.coord.top=c.geo.window.size.height-d.size.height:d.coord.top=c.geo.origin.windowOffset.top+this.__options.minIntersection+1-d.size.height):(d.coord.left>c.geo.window.size.width-d.size.width&&(d.coord.left=c.geo.window.size.width-d.size.width),d.coord.left<0&&(d.coord.left=0)),e.__sideChange(h,d.side),c.tooltipClone=h[0],c.tooltipParent=e.__instance.option("parent").parent[0],c.mode=d.mode,c.whole=d.whole,c.origin=e.__instance._$origin[0],c.tooltip=e.__instance._$tooltip[0],delete d.container,delete d.fits,delete d.mode,delete d.outerSize,delete d.whole,d.distance=d.distance.horizontal||d.distance.vertical;var l=a.extend(!0,{},d);if(e.__instance._trigger({edit:function(a){d=a},event:b,helper:c,position:l,type:"position"}),e.__options.functionPosition){var m=e.__options.functionPosition.call(e,e.__instance,c,l);m&&(d=m)}i.destroy();var n,o;"top"==d.side||"bottom"==d.side?(n={prop:"left",val:d.target-d.coord.left},o=d.size.width-this.__options.minIntersection):(n={prop:"top",val:d.target-d.coord.top},o=d.size.height-this.__options.minIntersection),n.val<this.__options.minIntersection?n.val=this.__options.minIntersection:n.val>o&&(n.val=o);var p;p=c.geo.origin.fixedLineage?c.geo.origin.windowOffset:{left:c.geo.origin.windowOffset.left+c.geo.window.scroll.left,top:c.geo.origin.windowOffset.top+c.geo.window.scroll.top},d.coord={left:p.left+(d.coord.left-c.geo.origin.windowOffset.left),top:p.top+(d.coord.top-c.geo.origin.windowOffset.top)},e.__sideChange(e.__instance._$tooltip,d.side),c.geo.origin.fixedLineage?e.__instance._$tooltip.css("position","fixed"):e.__instance._$tooltip.css("position",""),e.__instance._$tooltip.css({left:d.coord.left,top:d.coord.top,height:d.size.height,width:d.size.width}).find(".tooltipster-arrow").css({left:"",top:""}).css(n.prop,n.val),e.__instance._$tooltip.appendTo(e.__instance.option("parent")),e.__instance._trigger({type:"repositioned",event:b,position:d})},__sideChange:function(a,b){a.removeClass("tooltipster-bottom").removeClass("tooltipster-left").removeClass("tooltipster-right").removeClass("tooltipster-top").addClass("tooltipster-"+b)},__targetFind:function(a){var b={},c=this.__instance._$origin[0].getClientRects();if(c.length>1){var d=this.__instance._$origin.css("opacity");1==d&&(this.__instance._$origin.css("opacity",.99),c=this.__instance._$origin[0].getClientRects(),this.__instance._$origin.css("opacity",1))}if(c.length<2)b.top=Math.floor(a.geo.origin.windowOffset.left+a.geo.origin.size.width/2),b.bottom=b.top,b.left=Math.floor(a.geo.origin.windowOffset.top+a.geo.origin.size.height/2),b.right=b.left;else{var e=c[0];b.top=Math.floor(e.left+(e.right-e.left)/2),e=c.length>2?c[Math.ceil(c.length/2)-1]:c[0],b.right=Math.floor(e.top+(e.bottom-e.top)/2),e=c[c.length-1],b.bottom=Math.floor(e.left+(e.right-e.left)/2),e=c.length>2?c[Math.ceil((c.length+1)/2)-1]:c[c.length-1],b.left=Math.floor(e.top+(e.bottom-e.top)/2)}return b}}}),a});;
+/**
+ * Makes sure we have all the required levels on the Tribe Object
+ *
+ * @since  4.9.4
+ *
+ * @type   {PlainObject}
+ */
+tribe.events = tribe.events || {};
+tribe.events.views = tribe.events.views || {};
+
+/**
+ * Configures Views Tooltip Object in the Global Tribe variable
+ *
+ * @since  4.9.4
+ *
+ * @type   {PlainObject}
+ */
+tribe.events.views.tooltip = {};
+
+/**
+ * Initializes in a Strict env the code that manages the Event Views
+ *
+ * @since  4.9.4
+ *
+ * @param  {PlainObject} $   jQuery
+ * @param  {PlainObject} obj tribe.events.views.tooltip
+ *
+ * @return {void}
+ */
+( function( $, obj ) {
+	'use strict';
+	var $document = $( document );
+
+	/**
+	 * Config used for tooltip setup
+	 *
+	 * @since 4.9.10
+	 *
+	 * @type {PlainObject}
+	 */
+	obj.config = {
+		delayHoverIn: 300,
+		delayHoverOut: 300,
+	};
+
+	/**
+	 * Selectors used for configuration and setup
+	 *
+	 * @since 4.9.10
+	 *
+	 * @type {PlainObject}
+	 */
+	obj.selectors = {
+		tooltipTrigger: '[data-js~="tribe-events-tooltip"]',
+		tribeEventsTooltipTriggerHoverClass: '.tribe-events-tooltip-trigger--hover',
+		tribeEventsTooltipThemeClass: '.tribe-events-tooltip-theme',
+		tribeEventsTooltipThemeHoverClass: '.tribe-events-tooltip-theme--hover',
+		tribeCommonClass: '.tribe-common',
+		tribeEventsClass: '.tribe-events',
+	};
+
+	/**
+	 * Handle tooltip focus event
+	 *
+	 * @since 4.9.10
+	 *
+	 * @param {Event} event event object
+	 *
+	 * @return {void}
+	 */
+	obj.handleOriginFocus = function( event ) {
+		setTimeout( function() {
+			if (
+				event.data.target.is( ':focus' ) ||
+				event.data.target.hasClass( obj.selectors.tribeEventsTooltipTriggerHoverClass.className() )
+			) {
+				event.data.target.tooltipster( 'open' );
+			}
+		}, obj.config.delayHoverIn );
+	};
+
+	/**
+	 * Handle tooltip blur event
+	 *
+	 * @since 4.9.4
+	 *
+	 * @param {Event} event event object
+	 *
+	 * @return {void}
+	 */
+	obj.handleOriginBlur = function( event ) {
+		event.data.target.tooltipster( 'close' );
+	};
+
+	/**
+	 * Handle origin mouseenter and touchstart events
+	 *
+	 * @since 4.9.10
+	 *
+	 * @param {Event} event event object
+	 *
+	 * @return {void}
+	 */
+	obj.handleOriginHoverIn = function( event ) {
+		event.data.target.addClass( obj.selectors.tribeEventsTooltipTriggerHoverClass.className() );
+	};
+
+	/**
+	 * Handle origin mouseleave and touchleave events
+	 *
+	 * @since 4.9.10
+	 *
+	 * @param {Event} event event object
+	 *
+	 * @return {void}
+	 */
+	obj.handleOriginHoverOut = function( event ) {
+		event.data.target.removeClass( obj.selectors.tribeEventsTooltipTriggerHoverClass.className() );
+	};
+
+	/**
+	 * Handle tooltip mouseenter and touchstart event
+	 *
+	 * @since 4.9.10
+	 *
+	 * @param {Event} event event object
+	 *
+	 * @return {void}
+	 */
+	obj.handleTooltipHoverIn = function( event ) {
+		event.data.target.addClass( obj.selectors.tribeEventsTooltipThemeHoverClass.className() );
+	};
+
+	/**
+	 * Handle tooltip mouseleave and touchleave events
+	 *
+	 * @since 4.9.10
+	 *
+	 * @param {Event} event event object
+	 *
+	 * @return {void}
+	 */
+	obj.handleTooltipHoverOut = function( event ) {
+		event.data.target.removeClass( obj.selectors.tribeEventsTooltipThemeHoverClass.className() );
+	};
+
+	/**
+	 * Handle tooltip instance closing event
+	 *
+	 * @since 4.9.10
+	 *
+	 * @param {Event} event event object
+	 *
+	 * @return {void}
+	 */
+	obj.handleInstanceClose = function( event ) {
+		var $origin = event.data.origin;
+		var $tooltip = $( event.tooltip );
+
+		// if trigger is focused, hovered, or tooltip is hovered, do not close tooltip
+		if (
+			$origin.is( ':focus' ) ||
+			$origin.hasClass( obj.selectors.tribeEventsTooltipTriggerHoverClass.className() ) ||
+			$tooltip.hasClass( obj.selectors.tribeEventsTooltipThemeHoverClass.className() )
+		) {
+			event.stop();
+		}
+	};
+
+	/**
+	 * Handle tooltip instance close event
+	 *
+	 * @since 4.9.10
+	 *
+	 * @param {Event} event event object
+	 *
+	 * @return {void}
+	 */
+	obj.handleInstanceClosing = function( event ) {
+		$( event.tooltip )
+			.off( 'mouseenter touchstart', obj.handleTooltipHoverIn )
+			.off( 'mouseleave touchleave', obj.handleTooltipHoverOut );
+	};
+
+	/**
+	 * Override of the `functionInit` tooltipster method.
+	 * A custom function to be fired only once at instantiation.
+	 *
+	 * @since 4.9.10
+	 *
+	 * @param {Tooltipster} instance instance of Tooltipster
+	 * @param {PlainObject} helper   helper object with tooltip origin
+	 *
+	 * @return {void}
+	 */
+	obj.onFunctionInit = function( instance, helper ) {
+		var $origin = $( helper.origin );
+		$origin
+			.on( 'focus', { target: $origin }, obj.handleOriginFocus )
+			.on( 'blur', { target: $origin }, obj.handleOriginBlur )
+			.on( 'mouseenter touchstart', { target: $origin }, obj.handleOriginHoverIn )
+			.on( 'mouseleave touchleave', { target: $origin }, obj.handleOriginHoverOut );
+		instance
+			.on( 'close', { origin: $origin }, obj.handleInstanceClose )
+			.on( 'closing', { origin: $origin }, obj.handleInstanceClosing );
+	};
+
+	/**
+	 * Override of the `functionReady` tooltipster method.
+	 * A custom function to be fired when the tooltip and its contents have been added to the DOM.
+	 *
+	 * @since 4.9.10
+	 *
+	 * @param {Tooltipster} instance instance of Tooltipster
+	 * @param {PlainObject} helper   helper object with tooltip origin
+	 *
+	 * @return {void}
+	 */
+	obj.onFunctionReady = function( instance, helper ) {
+		var $tooltip = $( helper.tooltip );
+		$tooltip
+			.on( 'mouseenter touchstart', { target: $tooltip }, obj.handleTooltipHoverIn )
+			.on( 'mouseleave touchleave', { target: $tooltip }, obj.handleTooltipHoverOut );
+	};
+
+	/**
+	 * Deinitialize accessible tooltips via tooltipster
+	 *
+	 * @since 4.9.10
+	 *
+	 * @param {jQuery} $container jQuery object of view container.
+	 *
+	 * @return {void}
+	 */
+	obj.deinitTooltips = function( $container ) {
+		$container
+			.find( obj.selectors.tooltipTrigger )
+			.each( function( index, trigger ) {
+				$( trigger )
+					.off()
+					.tooltipster( 'instance' )
+					.off();
+			} );
+	};
+
+	/**
+	 * Initialize accessible tooltips via tooltipster
+	 *
+	 * @since 4.9.10
+	 *
+	 * @param {jQuery} $container jQuery object of view container.
+	 *
+	 * @return {void}
+	 */
+	obj.initTooltips = function( $container ) {
+		var theme = $container.data( 'tribeEventsTooltipTheme' );
+
+		$container
+			.find( obj.selectors.tooltipTrigger )
+			.each( function( index, trigger ) {
+				$( trigger ).tooltipster( {
+					animationDuration: 0,
+					interactive: true,
+					delay: [ obj.config.delayHoverIn, obj.config.delayHoverOut ],
+					delayTouch: [ obj.config.delayHoverIn, obj.config.delayHoverOut ],
+					theme: theme,
+					functionInit: obj.onFunctionInit,
+					functionReady: obj.onFunctionReady,
+				} );
+			} );
+	};
+
+	/**
+	 * Initialize tooltip theme
+	 *
+	 * @since 4.9.10
+	 *
+	 * @param {jQuery} $container jQuery object of view container.
+	 *
+	 * @return {void}
+	 */
+	obj.initTheme = function( $container ) {
+		$container.trigger( 'beforeTooltipInitTheme.tribeEvents', [ $container ] );
+
+		var theme = [
+			obj.selectors.tribeEventsTooltipThemeClass.className(),
+			obj.selectors.tribeCommonClass.className(),
+			obj.selectors.tribeEventsClass.className(),
+		];
+		$container.data( 'tribeEventsTooltipTheme', theme );
+
+		$container.trigger( 'afterTooltipInitTheme.tribeEvents', [ $container ] );
+	};
+
+	/**
+	 * Deinitialize tooltip JS.
+	 *
+	 * @since 4.9.5
+	 *
+	 * @param  {Event}       event    event object for 'beforeAjaxSuccess.tribeEvents' event
+	 * @param  {jqXHR}       jqXHR    Request object
+	 * @param  {PlainObject} settings Settings that this request was made with
+	 *
+	 * @return {void}
+	 */
+	obj.deinit = function( event, jqXHR, settings ) { // eslint-disable-line no-unused-vars
+		var $container = event.data.container;
+		obj.deinitTooltips( $container );
+		$container.off( 'beforeAjaxSuccess.tribeEvents', obj.deinit );
+	};
+
+	/**
+	 * Initialize tooltips JS.
+	 *
+	 * @since 4.9.5
+	 *
+	 * @param {Event}   event      event object for 'afterSetup.tribeEvents' event
+	 * @param {integer} index      jQuery.each index param from 'afterSetup.tribeEvents' event.
+	 * @param {jQuery}  $container jQuery object of view container.
+	 * @param {object}  data       data object passed from 'afterSetup.tribeEvents' event.
+	 *
+	 * @return {void}
+	 */
+	obj.init = function( event, index, $container, data ) { // eslint-disable-line no-unused-vars
+		obj.initTheme( $container );
+		obj.initTooltips( $container );
+		$container.on( 'beforeAjaxSuccess.tribeEvents', { container: $container }, obj.deinit );
+	};
+
+	/**
+	 * Handles the initialization of the scripts when Document is ready
+	 *
+	 * @since  4.9.4
+	 *
+	 * @return {void}
+	 */
+	obj.ready = function() {
+		$document.on(
+			'afterSetup.tribeEvents',
+			tribe.events.views.manager.selectors.container,
+			obj.init
+		);
+	};
+
+	// Configure on document ready
+	$( obj.ready );
+} )( jQuery, tribe.events.views.tooltip );
+;
+/**
+ * Makes sure we have all the required levels on the Tribe Object
+ *
+ * @since 4.9.4
+ *
+ * @type   {PlainObject}
+ */
+tribe.events = tribe.events || {};
+tribe.events.views = tribe.events.views || {};
+
+/**
+ * Configures Events Bar Object in the Global Tribe variable
+ *
+ * @since 4.9.4
+ *
+ * @type   {PlainObject}
+ */
+tribe.events.views.eventsBar = {};
+
+/**
+ * Initializes in a Strict env the code that manages the Event Views
+ *
+ * @since 4.9.4
+ *
+ * @param  {PlainObject} $   jQuery
+ * @param  {PlainObject} obj tribe.events.views.eventsBar
+ *
+ * @return {void}
+ */
+( function( $, obj ) {
+	'use strict';
+	var $document = $( document );
+
+	/**
+	 * Selectors used for configuration and setup
+	 *
+	 * @since 4.9.4
+	 *
+	 * @type {PlainObject}
+	 */
+	obj.selectors = {
+		eventsBar: '[data-js="tribe-events-events-bar"]',
+		searchButton: '[data-js="tribe-events-search-button"]',
+		searchButtonActiveClass: '.tribe-events-c-events-bar__search-button--active',
+		searchContainer: '[data-js="tribe-events-search-container"]',
+	};
+
+	/**
+	 * Object of key codes
+	 *
+	 * @since 4.9.4
+	 *
+	 * @type {PlainObject}
+	 */
+	obj.keyCode = {
+		END: 35,
+		HOME: 36,
+		LEFT: 37,
+		RIGHT: 39,
+	};
+
+	/**
+	 * Deinitialize accordion based on header and content
+	 *
+	 * @since 4.9.7
+	 *
+	 * @param {jQuery} $header jQuery object of header
+	 * @param {jQuery} $content jQuery object of contents
+	 *
+	 * @return {void}
+	 */
+	obj.deinitAccordion = function( $header, $content ) {
+		tribe.events.views.accordion.deinitAccordion( 0, $header );
+		tribe.events.views.accordion.deinitAccordionA11yAttrs( $header, $content );
+		$content.css( 'display', '' );
+	};
+
+	/**
+	 * Initialize accordion based on header and content
+	 *
+	 * @since 4.9.7
+	 *
+	 * @param {jQuery} $container jQuery object of view container
+	 * @param {jQuery} $header jQuery object of header
+	 * @param {jQuery} $content jQuery object of contents
+	 *
+	 * @return {void}
+	 */
+	obj.initAccordion = function( $container, $header, $content ) {
+		tribe.events.views.accordion.initAccordion( $container )( 0, $header );
+		tribe.events.views.accordion.initAccordionA11yAttrs( $header, $content );
+	};
+
+	/**
+	 * Toggles active class on search button
+	 *
+	 * @since 4.9.7
+	 *
+	 * @param {Event} event event object for click event
+	 *
+	 * @return {void}
+	 */
+	obj.handleSearchButtonClick = function( event ) {
+		event.data.target.toggleClass( obj.selectors.searchButtonActiveClass.className() );
+	};
+
+	/**
+	 * Deinitialize search button accordion
+	 *
+	 * @since 4.9.8
+	 *
+	 * @param {jQuery} $container jQuery object of view container
+	 *
+	 * @return {void}
+	 */
+	obj.deinitSearchAccordion = function( $container ) {
+		var $searchButton = $container.find( obj.selectors.searchButton );
+		$searchButton.removeClass( obj.selectors.searchButtonActiveClass.className() );
+		var $searchContainer = $container.find( obj.selectors.searchContainer );
+		obj.deinitAccordion( $searchButton, $searchContainer );
+		$searchButton.off( 'click', obj.handleSearchButtonClick );
+	};
+
+	/**
+	 * Initialize search button accordion
+	 *
+	 * @since 4.9.4
+	 *
+	 * @param {jQuery} $container jQuery object of view container
+	 *
+	 * @return {void}
+	 */
+	obj.initSearchAccordion = function( $container ) {
+		var $searchButton = $container.find( obj.selectors.searchButton );
+		var $searchContainer = $container.find( obj.selectors.searchContainer );
+		obj.initAccordion( $container, $searchButton, $searchContainer );
+		$searchButton.on( 'click', { target: $searchButton }, obj.handleSearchButtonClick );
+	};
+
+	/**
+	 * Initializes events bar state
+	 *
+	 * @since 4.9.8
+	 *
+	 * @param {jQuery} $container jQuery object of view container
+	 *
+	 * @return {void}
+	 */
+	obj.initState = function( $container ) {
+		var $eventsBar = $container.find( obj.selectors.eventsBar );
+		var state = {
+			mobileInitialized: false,
+			desktopInitialized: false,
+		};
+
+		$eventsBar.data( 'tribeEventsState', state );
+	};
+
+	/**
+	 * Deinitializes events bar
+	 *
+	 * @since 4.9.5
+	 *
+	 * @param {jQuery} $container jQuery object of view container
+	 *
+	 * @return {void}
+	 */
+	obj.deinitEventsBar = function( $container ) {
+		obj.deinitSearchAccordion( $container );
+	};
+
+	/**
+	 * Initializes events bar
+	 *
+	 * @since 4.9.8
+	 *
+	 * @param {jQuery} $container jQuery object of view container
+	 *
+	 * @return {void}
+	 */
+	obj.initEventsBar = function( $container ) {
+		var $eventsBar = $container.find( obj.selectors.eventsBar );
+
+		if ( $eventsBar.length ) {
+			var state = $eventsBar.data( 'tribeEventsState' );
+			var containerState = $container.data( 'tribeEventsState' );
+			var isMobile = containerState.isMobile;
+
+			// If viewport is mobile and mobile state is not initialized
+			if ( isMobile && ! state.mobileInitialized ) {
+				obj.initSearchAccordion( $container );
+				state.desktopInitialized = false;
+				state.mobileInitialized = true;
+				$eventsBar.data( 'tribeEventsState', state );
+
+			// If viewport is desktop and desktop state is not initialized
+			} else if ( ! isMobile && ! state.desktopInitialized ) {
+				obj.deinitSearchAccordion( $container );
+				state.mobileInitialized = false;
+				state.desktopInitialized = true;
+				$eventsBar.data( 'tribeEventsState', state );
+			}
+		}
+	};
+
+	/**
+	 * Handles 'resize.tribeEvents' event
+	 *
+	 * @since 4.9.7
+	 *
+	 * @param {Event} event event object for 'resize.tribeEvents' event
+	 *
+	 * @return {void}
+	 */
+	obj.handleResize = function( event ) {
+		obj.initEventsBar( event.data.container );
+	};
+
+	/**
+	 * Handles click event on document
+	 *
+	 * @since 4.9.7
+	 *
+	 * @param {Event} event event object for click event
+	 *
+	 * @return {void}
+	 */
+	obj.handleClick = function( event ) {
+		var $target = $( event.target );
+		var isParentSearchButton = Boolean( $target.closest( obj.selectors.searchButton ).length );
+		var isParentSearchContainer = Boolean( $target.closest( obj.selectors.searchContainer ).length ); // eslint-disable-line max-len
+
+		if ( ! ( isParentSearchButton || isParentSearchContainer ) ) {
+			var $container = event.data.container;
+			var $eventsBar = $container.find( obj.selectors.eventsBar );
+			var $searchButton = $eventsBar.find( obj.selectors.searchButton );
+
+			if ( $searchButton.hasClass( obj.selectors.searchButtonActiveClass.className() ) ) {
+				var $searchContainer = $eventsBar.find( obj.selectors.searchContainer );
+				$searchButton.removeClass( obj.selectors.searchButtonActiveClass.className() );
+				tribe.events.views.accordion.closeAccordion( $searchButton, $searchContainer );
+			}
+		}
+	};
+
+	/**
+	 * Unbind events for events bar
+	 *
+	 * @since 4.9.7
+	 *
+	 * @param  {jQuery}  $container jQuery object of view container
+	 *
+	 * @return {void}
+	 */
+	obj.unbindEvents = function( $container ) {
+		$container.off( 'resize.tribeEvents', obj.handleResize );
+		$document.off( 'click', obj.handleClick );
+	};
+
+	/**
+	 * Bind events for events bar
+	 *
+	 * @since 4.9.7
+	 *
+	 * @param  {jQuery}  $container jQuery object of view container
+	 *
+	 * @return {void}
+	 */
+	obj.bindEvents = function( $container ) {
+		$container.on( 'resize.tribeEvents', { container: $container }, obj.handleResize );
+		$document.on( 'click', { container: $container }, obj.handleClick );
+	};
+
+	/**
+	 * Deinitialize events bar JS
+	 *
+	 * @since 4.9.4
+	 *
+	 * @param  {Event}       event    event object for 'beforeAjaxSuccess.tribeEvents' event
+	 * @param  {jqXHR}       jqXHR    Request object
+	 * @param  {PlainObject} settings Settings that this request was made with
+	 *
+	 * @return {void}
+	 */
+	obj.deinit = function( event, jqXHR, settings ) { // eslint-disable-line no-unused-vars
+		var $container = event.data.container;
+		obj.deinitEventsBar( $container );
+		obj.unbindEvents( $container );
+		$container.off( 'beforeAjaxSuccess.tribeEvents', obj.deinit );
+	};
+
+	/**
+	 * Initialize events bar JS
+	 *
+	 * @since  4.9.8
+	 *
+	 * @param  {Event}   event      event object for 'afterSetup.tribeEvents' event
+	 * @param  {integer} index      jQuery.each index param from 'afterSetup.tribeEvents' event
+	 * @param  {jQuery}  $container jQuery object of view container
+	 * @param  {object}  data       data object passed from 'afterSetup.tribeEvents' event
+	 *
+	 * @return {void}
+	 */
+	obj.init = function( event, index, $container, data ) { // eslint-disable-line no-unused-vars
+		var $eventsBar = $container.find( obj.selectors.eventsBar );
+
+		if ( ! $eventsBar.length ) {
+			return;
+		}
+
+		obj.initState( $container );
+		obj.initEventsBar( $container );
+		obj.bindEvents( $container );
+		$container.on( 'beforeAjaxSuccess.tribeEvents', { container: $container }, obj.deinit );
+	};
+
+	/**
+	 * Handles the initialization of events bar when Document is ready
+	 *
+	 * @since 4.9.4
+	 *
+	 * @return {void}
+	 */
+	obj.ready = function() {
+		$document.on(
+			'afterSetup.tribeEvents',
+			tribe.events.views.manager.selectors.container,
+			obj.init
+		);
+	};
+
+	// Configure on document ready
+	$( obj.ready );
+} )( jQuery, tribe.events.views.eventsBar );
+;
+/**
+ * Makes sure we have all the required levels on the Tribe Object
+ *
+ * @since 4.9.5
+ *
+ * @type {Object}
+ */
+tribe.events = tribe.events || {};
+tribe.events.views = tribe.events.views || {};
+
+/**
+ * Configures Datepicker Object in the Global Tribe variable
+ *
+ * @since 4.9.5
+ *
+ * @type {Object}
+ */
+tribe.events.views.datepicker = {};
+
+/**
+ * Initializes in a Strict env the code that manages the Event Views
+ *
+ * @since 4.9.5
+ *
+ * @param  {Object} $   jQuery
+ * @param  {Object} obj tribe.events.views.datepicker
+ *
+ * @return {void}
+ */
+( function( $, obj ) {
+	'use strict';
+	var $document = $( document );
+
+	/**
+	 * Selectors used for configuration and setup
+	 *
+	 * @since 4.9.5
+	 *
+	 * @type {Object}
+	 */
+	obj.selectors = {
+		datepickerFormClass: '.tribe-events-c-top-bar__datepicker-form',
+		datepickerContainer: '[data-js="tribe-events-top-bar-datepicker-container"]',
+		datepickerDaysBody: '.datepicker-days tbody',
+		input: '[data-js="tribe-events-top-bar-date"]',
+		button: '[data-js="tribe-events-top-bar-datepicker-button"]',
+		buttonOpenClass: '.tribe-events-c-top-bar__datepicker-button--open',
+		dateInput: '[name="tribe-events-views[tribe-bar-date]"]',
+		prevIconTemplate: '.tribe-events-c-top-bar__datepicker-template-prev-icon',
+		nextIconTemplate: '.tribe-events-c-top-bar__datepicker-template-next-icon',
+	};
+
+	/**
+	 * Object of state
+	 *
+	 * @since 4.9.5
+	 *
+	 * @type {Object}
+	 */
+	obj.state = {
+		initialized: false,
+	};
+
+	/**
+	 * Object of datepicker options
+	 *
+	 * @since 4.9.10
+	 *
+	 * @type {Object}
+	 */
+	obj.options = {
+		container: null,
+		daysOfWeekDisabled: [],
+		maxViewMode: 'decade',
+		minViewMode: 'month',
+		orientation: 'bottom left',
+		showOnFocus: false,
+		templates: {
+			leftArrow: '',
+			rightArrow: '',
+		},
+	};
+
+	/**
+	 * Object of key codes
+	 *
+	 * @since 5.0.0
+	 *
+	 * @type {Object}
+	 */
+	obj.keyCode = {
+		ENTER: 13,
+	};
+
+	/**
+	 * Date object representing today
+	 *
+	 * @since 4.9.13
+	 *
+	 * @type {Date|null}
+	 */
+	obj.today = null;
+
+	/**
+	 * Object of date format map.
+	 * Date formats are mapped from PHP to Bootstrap Datepicker format.
+	 *
+	 * @since 4.9.11
+	 *
+	 * @type {Object}
+	 *
+	 * @see https://bootstrap-datepicker.readthedocs.io/en/latest/options.html#format
+	 */
+	obj.dateFormatMap = {
+		d: 'dd',
+		j: 'd',
+		m: 'mm',
+		n: 'm',
+		Y: 'yyyy',
+	};
+
+	/**
+	 * Mutation observer to watch for mutations
+	 *
+	 * @since 4.9.10
+	 *
+	 * @type {MutationObserver}
+	 */
+	obj.observer = null;
+
+	/**
+	 * Pads number with extra 0 if needed to make it double digit
+	 *
+	 * @since 4.9.5
+	 *
+	 * @param {integer} number number to pad with extra 0
+	 *
+	 * @return {string} string representation of padded number
+	 */
+	obj.padNumber = function( number ) {
+		var numStr = number + '';
+		var padding = numStr.length > 1 ? '' : '0';
+		return padding + numStr;
+	};
+
+	/**
+	 * Performs an AJAX request using manager.js request method
+	 *
+	 * @since 4.9.5
+	 *
+	 * @param {object} viewData object of view data
+	 * @param {jQuery} $container jQuery object of view container
+	 *
+	 * @return {void}
+	 */
+	obj.request = function( viewData, $container ) {
+		var data = {
+			view_data: viewData,
+			_wpnonce: $container.data( 'view-rest-nonce' ),
+		};
+
+		tribe.events.views.manager.request( data, $container );
+	};
+
+	/**
+	 * Create the Date input that will be preprended on the form created.
+	 *
+	 * @since 4.9.11
+	 *
+	 * @param {string} value string representation of the date value
+	 *
+	 * @return {jQuery}
+	 */
+	obj.createDateInputObj = function( value ) {
+		var $input = $( '<input>' );
+		$input.attr( {
+			type: 'hidden',
+			name: 'tribe-events-views[tribe-bar-date]',
+			value: value,
+		} );
+
+		return $input;
+	};
+
+	/**
+	 * Submits request after date change from datepicker based on live refresh setting.
+	 *
+	 * @since 4.9.11
+	 *
+	 * @param {jQuery} $container jQuery object of view container
+	 * @param {string} value string representation of the date value
+	 *
+	 * @return {void}
+	 */
+	obj.submitRequest = function( $container, value ) {
+		var viewData = {};
+		viewData[ 'tribe-bar-date' ] = value,
+
+		obj.request( viewData, $container );
+	};
+
+	/**
+	 * Handle datepicker changeDate event
+	 *
+	 * @since 4.9.5
+	 *
+	 * @param {Event} event event object for 'changeDate' event
+	 *
+	 * @return {void}
+	 */
+	obj.handleChangeDate = function( event ) {
+		var $container = event.data.container;
+		var date = event.date.getDate();
+		var month = event.date.getMonth() + 1;
+		var year = event.date.getFullYear();
+
+		var paddedDate = obj.padNumber( date );
+		var paddedMonth = obj.padNumber( month );
+
+		var dateValue = [ year, paddedMonth, paddedDate ].join( '-' );
+
+		obj.submitRequest( $container, dateValue );
+	};
+
+	/**
+	 * Handle datepicker changeMonth event
+	 *
+	 * @since 4.9.5
+	 *
+	 * @param {Event} event event object for 'changeMonth' event
+	 *
+	 * @return {void}
+	 */
+	obj.handleChangeMonth = function( event ) {
+		var $container = event.data.container;
+		var month, year;
+
+		if ( event.date ) {
+			month = event.date.getMonth() + 1;
+			year = event.date.getFullYear();
+		} else {
+			var date = $container
+				.find( obj.selectors.input )
+				.bootstrapDatepicker( 'getDate' );
+			month = date.getMonth() + 1;
+			year = date.getFullYear();
+		}
+
+		var paddedMonth = obj.padNumber( month );
+
+		var dateValue = [ year, paddedMonth ].join( '-' );
+
+		obj.submitRequest( $container, dateValue );
+	};
+
+	/**
+	 * Handle datepicker keydown event
+	 *
+	 * @since 5.0.0
+	 *
+	 * @param {Event} event event object for 'keydown' event
+	 *
+	 * @return {void}
+	 */
+	obj.handleKeyDown = function(event) {
+		if ( event.keyCode !== obj.keyCode.ENTER ) {
+			return;
+		}
+
+		event.data.input.bootstrapDatepicker().trigger( 'changeMonth' );
+	}
+
+	/**
+	 * Handle datepicker show event
+	 *
+	 * @since 4.9.13
+	 *
+	 * @param {Event} event event object for 'show' event
+	 *
+	 * @return {void}
+	 */
+	obj.handleShow = function( event ) {
+		event.data.datepickerButton.addClass( obj.selectors.buttonOpenClass.className() );
+	};
+
+	/**
+	 * Handle datepicker hide event
+	 *
+	 * @since 4.9.8
+	 *
+	 * @param {Event} event event object for 'hide' event
+	 *
+	 * @return {void}
+	 */
+	obj.handleHide = function( event ) {
+		var $datepickerButton = event.data.datepickerButton;
+		var state = $datepickerButton.data( 'tribeEventsState' );
+
+		event.data.observer.disconnect();
+
+		if ( state.isTarget ) {
+			event.data.input.bootstrapDatepicker( 'show' );
+			return;
+		}
+
+		$datepickerButton
+			.removeClass( obj.selectors.buttonOpenClass.className() )
+			.trigger( 'focus' );
+	};
+
+	/**
+	 * Handle datepicker button mousedown
+	 *
+	 * @since 4.9.8
+	 *
+	 * @param {Event} event event object for 'mousedown' event
+	 *
+	 * @return {void}
+	 */
+	obj.handleMousedown = function( event ) {
+		var $datepickerButton = event.data.target;
+		var state = $datepickerButton.data( 'tribeEventsState' );
+
+		if ( 'touchstart' === event.type ) {
+			var method = $datepickerButton.hasClass( obj.selectors.buttonOpenClass.className() )
+				? 'hide'
+				: 'show';
+			var tapHide = 'hide' === method;
+			state.isTarget = false;
+
+			$datepickerButton
+				.data( 'tribeTapHide', tapHide )
+				.data( 'tribeEventsState', state )
+				.off( 'mousedown', obj.handleMousedown );
+
+			return;
+		}
+
+		state.isTarget = true;
+		$datepickerButton.data( 'tribeEventsState', state );
+	};
+
+	/**
+	 * Handle datepicker button click
+	 *
+	 * @since 4.9.8
+	 *
+	 * @param {Event} event event object for 'click' event
+	 *
+	 * @return {void}
+	 */
+	obj.handleClick = function( event ) {
+		var $input = event.data.input;
+		var $datepickerButton = event.data.target;
+		var state = $datepickerButton.data( 'tribeEventsState' );
+		var method = $datepickerButton.hasClass( obj.selectors.buttonOpenClass.className() )
+			? 'hide'
+			: 'show';
+		var tapHide = $datepickerButton.data( 'tribeTapHide' );
+
+		if ( tapHide ) {
+			return;
+		}
+
+		state.isTarget = false;
+
+		$datepickerButton.data( 'tribeEventsState', state );
+		$input.bootstrapDatepicker( method );
+
+		if ( 'show' === method ) {
+			$input.trigger( 'focus' );
+		}
+	};
+
+	/**
+	 * Curry function to handle mutations
+	 * Used to pass in `data`
+	 *
+	 * @since 4.9.7
+	 *
+	 * @param {Object} data data object to be passed for use in handler
+	 *
+	 * @return {function}
+	 */
+	obj.handleMutation = function( data ) {
+		var $container = data.container;
+
+		/**
+		 * Handle mutations from mutation observer
+		 *
+		 * @since 4.9.7
+		 *
+		 * @param {array} mutationsList list of mutations that have occurred
+		 * @param {MutationObserver} observer mutation observer instance
+		 *
+		 * @return {void}
+		 */
+		return function( mutationsList, observer ) { // eslint-disable-line no-unused-vars
+			mutationsList.forEach( function( mutation ) {
+				// if datepicker switches months via prev/next arrows or by selecting a month on month picker
+				if (
+					'childList' === mutation.type &&
+					$container.find( obj.selectors.datepickerDaysBody ).is( mutation.target ) &&
+					mutation.addedNodes.length
+				) {
+					$container.trigger( 'handleMutationMonthChange.tribeEvents' );
+				}
+			} );
+		};
+	};
+
+	/**
+	 * Set today to date object representing today
+	 *
+	 * @since 4.9.13
+	 *
+	 * @param {string} today string representation of today's date according to website time
+	 *
+	 * @return {void}
+	 */
+	obj.setToday = function( today ) {
+		var date = today;
+		if ( today.indexOf( ' ' ) >= 0 ) {
+			date = today.split( ' ' )[0];
+		}
+
+		obj.today = new Date( date );
+	};
+
+	/**
+	 * Determine whether or not date is the same as today.
+	 * The function uses UTC values to maintain consistency with website date.
+	 * Function will return false if proper unit is not provided.
+	 *
+	 * @since 4.9.13
+	 *
+	 * @param {Date}   date Date object representing the date being compared
+	 * @param {string} unit Unit to compare dates to
+	 *
+	 * @return {bool}
+	 */
+	obj.isSameAsToday = function( date, unit ) {
+		switch ( unit ) {
+			case 'year':
+				return date.getFullYear() === obj.today.getUTCFullYear();
+			case 'month':
+				return obj.isSameAsToday( date, 'year' ) && date.getMonth() === obj.today.getUTCMonth();
+			case 'day':
+				return obj.isSameAsToday( date, 'month' ) && date.getDate() === obj.today.getUTCDate();
+			default:
+				return false;
+		}
+	}
+
+	/**
+	 * Determine whether or not date is before today.
+	 * The function uses UTC values to maintain consistency with website date.
+	 * Function will return false if proper unit is not provided.
+	 *
+	 * @since 4.9.13
+	 *
+	 * @param {Date}   date Date object representing the date being compared
+	 * @param {string} unit Unit to compare dates to
+	 *
+	 * @return {bool}
+	 */
+	obj.isBeforeToday = function( date, unit ) {
+		switch ( unit ) {
+			case 'year':
+				return date.getFullYear() < obj.today.getUTCFullYear();
+			case 'month':
+				return obj.isBeforeToday( date, 'year' )
+					|| ( obj.isSameAsToday( date, 'year' ) && date.getMonth() < obj.today.getUTCMonth() );
+			case 'day':
+				return obj.isBeforeToday( date, 'month' )
+					|| ( obj.isSameAsToday( date, 'month' ) && date.getDate() < obj.today.getUTCDate() );
+			default:
+				return false;
+		}
+	};
+
+	/**
+	 * Filter datepicker day cells
+	 *
+	 * @since 4.9.13
+	 *
+	 * @return {string|void}
+	 */
+	obj.filterDayCells = function( date ) {
+		if ( obj.isBeforeToday( date, 'day' ) ) {
+			return 'past';
+		} else if ( obj.isSameAsToday( date, 'day' ) ) {
+			return 'current';
+		}
+	};
+
+	/**
+	 * Filter datepicker month cells
+	 *
+	 * @since 4.9.13
+	 *
+	 * @return {string|void}
+	 */
+	obj.filterMonthCells = function( date ) {
+		if ( obj.isBeforeToday( date, 'month' ) ) {
+			return 'past';
+		} else if ( obj.isSameAsToday( date, 'month' ) ) {
+			return 'current';
+		}
+	};
+
+	/**
+	 * Filter datepicker year cells
+	 *
+	 * @since 4.9.13
+	 *
+	 * @return {string|void}
+	 */
+	obj.filterYearCells = function( date ) {
+		if ( obj.isBeforeToday( date, 'year' ) ) {
+			return 'past';
+		} else if ( obj.isSameAsToday( date, 'year' ) ) {
+			return 'current';
+		}
+	};
+
+	/**
+	 * Convert date format from PHP to Bootstrap datepicker format.
+	 *
+	 * @since 4.9.11
+	 *
+	 * @param {string} dateFormat datepicker date format in PHP format.
+	 *
+	 * @return {string}
+	 */
+	obj.convertDateFormat = function( dateFormat ) {
+		var convertedDateFormat = dateFormat;
+		Object.keys( obj.dateFormatMap ).forEach( function( key ) {
+			convertedDateFormat = convertedDateFormat.replace( key, obj.dateFormatMap[ key ] );
+		} );
+
+		return convertedDateFormat;
+	};
+
+	/**
+	 * Initialize datepicker date format.
+	 *
+	 * @since 4.9.11
+	 *
+	 * @param {object} data data object passed from 'afterSetup.tribeEvents' event
+	 *
+	 * @return {void}
+	 */
+	obj.initDateFormat = function( data ) {
+		var dateFormats = data.date_formats || {};
+		var dateFormat = dateFormats.compact;
+		var convertedDateFormat = obj.convertDateFormat( dateFormat );
+		obj.options.format = convertedDateFormat;
+	};
+
+	/**
+	 * Deinitialize datepicker JS
+	 *
+	 * @since  4.9.5
+	 *
+	 * @param  {Event}       event    event object for 'beforeAjaxSuccess.tribeEvents' event
+	 * @param  {jqXHR}       jqXHR    Request object
+	 * @param  {Object} settings Settings that this request was made with
+	 *
+	 * @return {void}
+	 */
+	obj.deinit = function( event, jqXHR, settings ) {
+		var $container = event.data.container;
+
+		$container.trigger( 'beforeDatepickerDeinit.tribeEvents', [ jqXHR, settings ] );
+
+		var $input = $container.find( obj.selectors.input );
+		var $datepickerButton = $container.find( obj.selectors.button );
+
+		$input.bootstrapDatepicker( 'destroy' ).off();
+		$datepickerButton.off();
+		$container.off( 'beforeAjaxSuccess.tribeEvents', obj.deinit );
+
+		$container.trigger( 'afterDatepickerDeinit.tribeEvents', [ jqXHR, settings ] );
+	};
+
+	/**
+	 * Initialize datepicker JS
+	 *
+	 * @since  4.9.8
+	 *
+	 * @param  {Event}   event      event object for 'afterSetup.tribeEvents' event
+	 * @param  {integer} index      jQuery.each index param from 'afterSetup.tribeEvents' event
+	 * @param  {jQuery}  $container jQuery object of view container
+	 * @param  {object}  data       data object passed from 'afterSetup.tribeEvents' event
+	 *
+	 * @return {void}
+	 */
+	obj.init = function( event, index, $container, data ) {
+		$container.trigger( 'beforeDatepickerInit.tribeEvents', [ index, $container, data ] );
+
+		var $input = $container.find( obj.selectors.input );
+		var $datepickerButton = $container.find( obj.selectors.button );
+		var $prevIcon = $container.find( obj.selectors.prevIconTemplate ).html();
+		var $nextIcon = $container.find( obj.selectors.nextIconTemplate ).html();
+		var viewSlug = data.slug;
+		var isMonthView = 'month' === viewSlug;
+
+		// set up datepicker change event and handler
+		var changeEvent = isMonthView ? 'changeMonth' : 'changeDate';
+		var changeHandler = isMonthView ? obj.handleChangeMonth : obj.handleChangeDate;
+
+		// set up datepicker button state
+		var state = {
+			isTarget: false,
+		};
+
+		// set up mutation observer
+		obj.observer = new MutationObserver( obj.handleMutation( { container: $container } ) );
+
+		// set up today's date
+		obj.setToday( data.today );
+
+		// set options for datepicker
+		obj.initDateFormat( data );
+		obj.options.weekStart = data.start_of_week;
+		obj.options.container = $container.find( obj.selectors.datepickerContainer );
+		obj.options.minViewMode = isMonthView ? 'year' : 'month';
+		var tribeL10nDatatables = window.tribe_l10n_datatables || {};
+		var datepickerI18n = tribeL10nDatatables.datepicker || {};
+		var nextText = datepickerI18n.nextText || 'Next';
+		var prevText = datepickerI18n.prevText || 'Prev';
+		obj.options.templates.leftArrow = $prevIcon
+			+ '<span class="tribe-common-a11y-visual-hide">'
+			+ prevText
+			+ '</span>';
+		obj.options.templates.rightArrow = $nextIcon
+			+ '<span class="tribe-common-a11y-visual-hide">'
+			+ nextText
+			+ '</span>';
+		obj.options.beforeShowDay = obj.filterDayCells;
+		obj.options.beforeShowMonth = obj.filterMonthCells;
+		obj.options.beforeShowYear = obj.filterYearCells;
+
+		$input
+			.bootstrapDatepicker( obj.options )
+			.on( changeEvent, { container: $container }, changeHandler )
+			.on( 'show', { datepickerButton: $datepickerButton }, obj.handleShow )
+			.on(
+				'hide',
+				{ datepickerButton: $datepickerButton, input: $input, observer: obj.observer },
+				obj.handleHide
+			);
+
+		if ( isMonthView ) {
+			$input
+				.bootstrapDatepicker()
+				.on( 'keydown', { input: $input }, obj.handleKeyDown );
+		}
+
+		$datepickerButton
+			.on( 'touchstart mousedown', { target: $datepickerButton }, obj.handleMousedown )
+			.on( 'click', { target: $datepickerButton, input: $input }, obj.handleClick )
+			.data( 'tribeEventsState', state );
+
+		// deinit datepicker and event handlers before success
+		$container.on(
+			'beforeAjaxSuccess.tribeEvents',
+			{ container: $container, viewSlug: viewSlug },
+			obj.deinit
+		);
+
+		$container.trigger( 'afterDatepickerInit.tribeEvents', [ index, $container, data ] );
+	};
+
+	/**
+	 * Initialize datepicker i18n
+	 *
+	 * @since 4.9.5
+	 *
+	 * @return {void}
+	 */
+	obj.initDatepickerI18n = function() {
+		var tribeL10nDatatables = window.tribe_l10n_datatables || {};
+		var datepickerI18n = tribeL10nDatatables.datepicker || {};
+
+		datepickerI18n.dayNames &&
+			( $.fn.bootstrapDatepicker.dates.en.days = datepickerI18n.dayNames );
+		datepickerI18n.dayNamesShort &&
+			( $.fn.bootstrapDatepicker.dates.en.daysShort = datepickerI18n.dayNamesShort );
+		datepickerI18n.dayNamesMin &&
+			( $.fn.bootstrapDatepicker.dates.en.daysMin = datepickerI18n.dayNamesMin );
+		datepickerI18n.monthNames &&
+			( $.fn.bootstrapDatepicker.dates.en.months = datepickerI18n.monthNames );
+		datepickerI18n.monthNamesMin &&
+			( $.fn.bootstrapDatepicker.dates.en.monthsShort = datepickerI18n.monthNamesMin );
+		datepickerI18n.today &&
+			( $.fn.bootstrapDatepicker.dates.en.today = datepickerI18n.today );
+		datepickerI18n.clear &&
+			( $.fn.bootstrapDatepicker.dates.en.clear = datepickerI18n.clear );
+	};
+
+	/**
+	 * Initialize datepicker to jQuery object
+	 *
+	 * @since 4.9.5
+	 *
+	 * @return {void}
+	 */
+	obj.initDatepicker = function() {
+		if ( $.fn.datepicker && $.fn.datepicker.noConflict ) {
+			var datepicker = $.fn.datepicker.noConflict();
+			$.fn.bootstrapDatepicker = datepicker;
+
+			obj.initDatepickerI18n();
+			obj.state.initialized = true;
+		}
+	};
+
+	/**
+	 * Handles the initialization of the Datepicker when Document is ready
+	 *
+	 * @since 4.9.5
+	 *
+	 * @return {void}
+	 */
+	obj.ready = function() {
+		obj.initDatepicker();
+
+		if ( obj.state.initialized ) {
+			$document.on(
+				'afterSetup.tribeEvents',
+				tribe.events.views.manager.selectors.container,
+				obj.init
+			);
+		}
+	};
+
+	// Configure on document ready
+	$( obj.ready );
+} )( jQuery, tribe.events.views.datepicker );
+;
+/**
+ * Makes sure we have all the required levels on the Tribe Object
+ *
+ * @since 5.12.0
+ *
+ * @type   {PlainObject}
+ */
+ tribe.events = tribe.events || {};
+ tribe.events.views = tribe.events.views || {};
+
+ /**
+  * Configures Views Object in the Global Tribe variable
+  *
+  * @since 5.12.0
+  *
+  * @type   {PlainObject}
+  */
+ tribe.events.views.icalLinks = {};
+
+ /**
+  * Initializes in a Strict env the code that manages the Event Views
+  *
+  * @since 5.12.0
+  *
+  * @param  {PlainObject} $   jQuery
+  * @param  {PlainObject} obj tribe.events.views.icalLinks
+  *
+  * @return {void}
+  */
+ ( function( $, obj ) {
+	'use strict';
+
+	/**
+	 * Selectors used for configuration and setup
+	 *
+	 * @since 5.12.0
+	 *
+	 * @type {PlainObject}
+	 */
+	obj.selectors = {
+		icalLinks: '.tribe-events-c-subscribe-dropdown',
+		icalLinksButton: '.tribe-events-c-subscribe-dropdown__button',
+		icalLinksButtonActiveClass: 'tribe-events-c-subscribe-dropdown__button--active',
+		icalLinksListContainer: 'tribe-events-c-subscribe-dropdown__content',
+	};
+
+	/**
+	 * Toggles active class on view selector button
+	 *
+	 * @since 5.12.0
+	 *
+	 * @param {Event} event event object for click event
+	 *
+	 * @return {void}
+	 */
+	obj.handleIcalLinksButtonClick = function( event ) {
+		$( event.target ).toggleClass( obj.selectors.icalLinksButtonActiveClass );
+	};
+
+	/**
+	 * Binds events for container
+	 *
+	 * @since 5.12.0
+	 *
+	 * @param  {jQuery} $container jQuery object of view container
+	 *
+	 * @return {void}
+	 */
+	obj.bindEvents = function( $container ) { // eslint-disable-line no-unused-vars
+		$( document ).on(
+			'click focus focus-within',
+			obj.selectors.icalLinksButton,
+			obj.handleIcalLinksButtonClick
+		);
+	};
+	/**
+	 * Unbinds events for container
+	 *
+	 * @since  4.9.7
+	 *
+	 * @param  {jQuery}  $container jQuery object of view container
+	 *
+	 * @return {void}
+	 */
+	obj.unbindEvents = function( $container ) {
+		$container
+			.find( obj.selectors.icalLinksButton )
+			.off( 'click', obj.handleIcalLinksButtonClick );
+	};
+
+	/**
+	 * Deinitialize ical links JS
+	 *
+	 * @since 5.12.0
+	 *
+	 * @param  {Event}       event    event object for 'beforeAjaxSuccess.tribeEvents' event
+	 * @param  {jqXHR}       jqXHR    Request object
+	 * @param  {PlainObject} settings Settings that this request was made with
+	 *
+	 * @return {void}
+	 */
+	obj.deinit = function( event, jqXHR, settings ) { // eslint-disable-line no-unused-vars
+		var $container = event.data.container;
+		obj.unbindEvents( $container );
+		$container.off( 'beforeAjaxSuccess.tribeEvents', obj.deinit );
+	};
+
+	/**
+	 * Initialize view selector JS
+	 *
+	 * @since 5.12.0
+	 *
+	 * @param  {Event}   event      event object for 'afterSetup.tribeEvents' event
+	 * @param  {integer} index      jQuery.each index param from 'afterSetup.tribeEvents' event
+	 * @param  {jQuery}  $container jQuery object of links container
+	 * @param  {object}  data       data object passed from 'afterSetup.tribeEvents' event
+	 *
+	 * @return {void}
+	 */
+	obj.init = function( event, index, $container, data ) { // eslint-disable-line no-unused-vars
+		var $icalLinks = $container.find( obj.selectors.icalLinks );
+
+		if ( ! $icalLinks.length ) {
+			return;
+		}
+
+		obj.bindEvents( $container );
+		$container.on( 'beforeAjaxSuccess.tribeEvents', { container: $container }, obj.deinit );
+	};
+
+	/**
+	 * Handles the initialization of the view selector when Document is ready
+	 *
+	 * @since 5.12.0
+	 *
+	 * @return {void}
+	 */
+	obj.ready = function() {
+		$( document ).on(
+			'afterSetup.tribeEvents',
+			obj.init
+		);
+	};
+
+	// Configure on document ready
+	$( obj.ready );
+
+} )( jQuery, tribe.events.views.icalLinks );
+;
+!function(){function t(){if(this.complete){var e=this.getAttribute("data-lazy-src");if(e&&this.src!==e)this.addEventListener("onload",t);else{var d=this.width,n=this.height;d&&d>0&&n&&n>0&&(this.setAttribute("width",d),this.setAttribute("height",n),i(this))}}else this.addEventListener("onload",t)}var e=function(){for(var e=document.querySelectorAll("img[data-recalc-dims]"),i=0;i<e.length;i++)t.call(e[i])},i=function(t){t.removeAttribute("data-recalc-dims"),t.removeAttribute("scale")};"undefined"!=typeof window&&"undefined"!=typeof document&&("loading"===document.readyState?document.addEventListener("DOMContentLoaded",e):e()),document.body.addEventListener("is.post-load",e)}();;
+!function(){const e=document.querySelectorAll(".coblocks-animate");if("IntersectionObserver"in window){const t=new IntersectionObserver((e=>{e.forEach((e=>{e.isIntersecting&&(e.target.classList.add(e.target.dataset.coblocksAnimation),t.unobserve(e.target))}))}),{threshold:[.15]});e.forEach((e=>{t.observe(e)}))}else e.forEach((e=>{e.classList.remove("coblocks-animate"),delete e.dataset.coblocksAnimation}))}();;
+var runtime=function(a){"use strict";var u,t=Object.prototype,h=t.hasOwnProperty,r="function"==typeof Symbol?Symbol:{},n=r.iterator||"@@iterator",e=r.asyncIterator||"@@asyncIterator",o=r.toStringTag||"@@toStringTag";function i(t,r,e){return Object.defineProperty(t,r,{value:e,enumerable:!0,configurable:!0,writable:!0}),t[r]}try{i({},"")}catch(t){i=function(t,r,e){return t[r]=e}}function c(t,r,e,n){var o,i,a,c,r=r&&r.prototype instanceof d?r:d,r=Object.create(r.prototype),n=new j(n||[]);return r._invoke=(o=t,i=e,a=n,c=l,function(t,r){if(c===p)throw new Error("Generator is already running");if(c===y){if("throw"===t)throw r;return k()}for(a.method=t,a.arg=r;;){var e=a.delegate;if(e){var n=function t(r,e){var n=r.iterator[e.method];if(n===u){if(e.delegate=null,"throw"===e.method){if(r.iterator.return&&(e.method="return",e.arg=u,t(r,e),"throw"===e.method))return v;e.method="throw",e.arg=new TypeError("The iterator does not provide a 'throw' method")}return v}var n=f(n,r.iterator,e.arg);if("throw"===n.type)return e.method="throw",e.arg=n.arg,e.delegate=null,v;n=n.arg;if(!n)return e.method="throw",e.arg=new TypeError("iterator result is not an object"),e.delegate=null,v;{if(!n.done)return n;e[r.resultName]=n.value,e.next=r.nextLoc,"return"!==e.method&&(e.method="next",e.arg=u)}e.delegate=null;return v}(e,a);if(n){if(n===v)continue;return n}}if("next"===a.method)a.sent=a._sent=a.arg;else if("throw"===a.method){if(c===l)throw c=y,a.arg;a.dispatchException(a.arg)}else"return"===a.method&&a.abrupt("return",a.arg);c=p;n=f(o,i,a);if("normal"===n.type){if(c=a.done?y:s,n.arg!==v)return{value:n.arg,done:a.done}}else"throw"===n.type&&(c=y,a.method="throw",a.arg=n.arg)}}),r}function f(t,r,e){try{return{type:"normal",arg:t.call(r,e)}}catch(t){return{type:"throw",arg:t}}}a.wrap=c;var l="suspendedStart",s="suspendedYield",p="executing",y="completed",v={};function d(){}function g(){}function m(){}var w={};w[n]=function(){return this};r=Object.getPrototypeOf,r=r&&r(r(O([])));r&&r!==t&&h.call(r,n)&&(w=r);var L=m.prototype=d.prototype=Object.create(w);function x(t){["next","throw","return"].forEach(function(r){i(t,r,function(t){return this._invoke(r,t)})})}function b(a,c){var r;this._invoke=function(e,n){function t(){return new c(function(t,r){!function r(t,e,n,o){t=f(a[t],a,e);if("throw"!==t.type){var i=t.arg;return(e=i.value)&&"object"==typeof e&&h.call(e,"__await")?c.resolve(e.__await).then(function(t){r("next",t,n,o)},function(t){r("throw",t,n,o)}):c.resolve(e).then(function(t){i.value=t,n(i)},function(t){return r("throw",t,n,o)})}o(t.arg)}(e,n,t,r)})}return r=r?r.then(t,t):t()}}function E(t){var r={tryLoc:t[0]};1 in t&&(r.catchLoc=t[1]),2 in t&&(r.finallyLoc=t[2],r.afterLoc=t[3]),this.tryEntries.push(r)}function _(t){var r=t.completion||{};r.type="normal",delete r.arg,t.completion=r}function j(t){this.tryEntries=[{tryLoc:"root"}],t.forEach(E,this),this.reset(!0)}function O(r){if(r){var t=r[n];if(t)return t.call(r);if("function"==typeof r.next)return r;if(!isNaN(r.length)){var e=-1,t=function t(){for(;++e<r.length;)if(h.call(r,e))return t.value=r[e],t.done=!1,t;return t.value=u,t.done=!0,t};return t.next=t}}return{next:k}}function k(){return{value:u,done:!0}}return((g.prototype=L.constructor=m).constructor=g).displayName=i(m,o,"GeneratorFunction"),a.isGeneratorFunction=function(t){t="function"==typeof t&&t.constructor;return!!t&&(t===g||"GeneratorFunction"===(t.displayName||t.name))},a.mark=function(t){return Object.setPrototypeOf?Object.setPrototypeOf(t,m):(t.__proto__=m,i(t,o,"GeneratorFunction")),t.prototype=Object.create(L),t},a.awrap=function(t){return{__await:t}},x(b.prototype),b.prototype[e]=function(){return this},a.AsyncIterator=b,a.async=function(t,r,e,n,o){void 0===o&&(o=Promise);var i=new b(c(t,r,e,n),o);return a.isGeneratorFunction(r)?i:i.next().then(function(t){return t.done?t.value:i.next()})},x(L),i(L,o,"Generator"),L[n]=function(){return this},L.toString=function(){return"[object Generator]"},a.keys=function(e){var t,n=[];for(t in e)n.push(t);return n.reverse(),function t(){for(;n.length;){var r=n.pop();if(r in e)return t.value=r,t.done=!1,t}return t.done=!0,t}},a.values=O,j.prototype={constructor:j,reset:function(t){if(this.prev=0,this.next=0,this.sent=this._sent=u,this.done=!1,this.delegate=null,this.method="next",this.arg=u,this.tryEntries.forEach(_),!t)for(var r in this)"t"===r.charAt(0)&&h.call(this,r)&&!isNaN(+r.slice(1))&&(this[r]=u)},stop:function(){this.done=!0;var t=this.tryEntries[0].completion;if("throw"===t.type)throw t.arg;return this.rval},dispatchException:function(e){if(this.done)throw e;var n=this;function t(t,r){return i.type="throw",i.arg=e,n.next=t,r&&(n.method="next",n.arg=u),!!r}for(var r=this.tryEntries.length-1;0<=r;--r){var o=this.tryEntries[r],i=o.completion;if("root"===o.tryLoc)return t("end");if(o.tryLoc<=this.prev){var a=h.call(o,"catchLoc"),c=h.call(o,"finallyLoc");if(a&&c){if(this.prev<o.catchLoc)return t(o.catchLoc,!0);if(this.prev<o.finallyLoc)return t(o.finallyLoc)}else if(a){if(this.prev<o.catchLoc)return t(o.catchLoc,!0)}else{if(!c)throw new Error("try statement without catch or finally");if(this.prev<o.finallyLoc)return t(o.finallyLoc)}}}},abrupt:function(t,r){for(var e=this.tryEntries.length-1;0<=e;--e){var n=this.tryEntries[e];if(n.tryLoc<=this.prev&&h.call(n,"finallyLoc")&&this.prev<n.finallyLoc){var o=n;break}}var i=(o=o&&("break"===t||"continue"===t)&&o.tryLoc<=r&&r<=o.finallyLoc?null:o)?o.completion:{};return i.type=t,i.arg=r,o?(this.method="next",this.next=o.finallyLoc,v):this.complete(i)},complete:function(t,r){if("throw"===t.type)throw t.arg;return"break"===t.type||"continue"===t.type?this.next=t.arg:"return"===t.type?(this.rval=this.arg=t.arg,this.method="return",this.next="end"):"normal"===t.type&&r&&(this.next=r),v},finish:function(t){for(var r=this.tryEntries.length-1;0<=r;--r){var e=this.tryEntries[r];if(e.finallyLoc===t)return this.complete(e.completion,e.afterLoc),_(e),v}},catch:function(t){for(var r=this.tryEntries.length-1;0<=r;--r){var e=this.tryEntries[r];if(e.tryLoc===t){var n,o=e.completion;return"throw"===o.type&&(n=o.arg,_(e)),n}}throw new Error("illegal catch attempt")},delegateYield:function(t,r,e){return this.delegate={iterator:O(t),resultName:r,nextLoc:e},"next"===this.method&&(this.arg=u),v}},a}("object"==typeof module?module.exports:{});try{regeneratorRuntime=runtime}catch(t){Function("r","regeneratorRuntime = r")(runtime)};
+/**
+ * core-js 3.11.0
+ * https://github.com/zloirock/core-js
+ * License: http://rock.mit-license.org
+ * © 2021 Denis Pushkarev (zloirock.ru)
+ */
+!function(S){"use strict";var r,e,o;e={},(o=function(t){if(e[t])return e[t].exports;var n=e[t]={i:t,l:!1,exports:{}};return r[t].call(n.exports,n,n.exports,o),n.l=!0,n.exports}).m=r=[function(t,n,r){r(1),r(69),r(71),t.exports=r(75)},function(t,n,r){var e=r(2),o=r(46),i=r(48),c=r(50),u=r(19),f=r(8),a=r(54),s=function(t,n){var r=this;if(!(r instanceof s))return new s(t,n);i&&(r=i(new Error(S),o(r))),n!==S&&u(r,"message",String(n));n=[];return a(t,n.push,{that:n}),u(r,"errors",n),r};s.prototype=c(Error.prototype,{constructor:f(5,s),message:f(5,""),name:f(5,"AggregateError")}),e({global:!0},{AggregateError:s})},function(t,n,r){var a=r(3),s=r(4).f,p=r(19),l=r(22),g=r(23),v=r(33),y=r(45);t.exports=function(t,n){var r,e,o,i=t.target,c=t.global,u=t.stat,f=c?a:u?a[i]||g(i,{}):(a[i]||{}).prototype;if(f)for(r in n){if(e=n[r],o=t.noTargetGet?(o=s(f,r))&&o.value:f[r],!y(c?r:i+(u?".":"#")+r,t.forced)&&o!==S){if(typeof e==typeof o)continue;v(e,o)}(t.sham||o&&o.sham)&&p(e,"sham",!0),l(f,r,e,t)}}},function(t,n){function r(t){return t&&t.Math==Math&&t}t.exports=r("object"==typeof globalThis&&globalThis)||r("object"==typeof window&&window)||r("object"==typeof self&&self)||r("object"==typeof global&&global)||function(){return this}()||Function("return this")()},function(t,n,r){var e=r(5),o=r(7),i=r(8),c=r(9),u=r(13),f=r(15),a=r(17),s=Object.getOwnPropertyDescriptor;n.f=e?s:function(t,n){if(t=c(t),n=u(n,!0),a)try{return s(t,n)}catch(t){}if(f(t,n))return i(!o.f.call(t,n),t[n])}},function(t,n,r){r=r(6);t.exports=!r(function(){return 7!=Object.defineProperty({},1,{get:function(){return 7}})[1]})},function(t,n){t.exports=function(t){try{return!!t()}catch(t){return!0}}},function(t,n,r){var e={}.propertyIsEnumerable,o=Object.getOwnPropertyDescriptor,i=o&&!e.call({1:2},1);n.f=i?function(t){t=o(this,t);return!!t&&t.enumerable}:e},function(t,n){t.exports=function(t,n){return{enumerable:!(1&t),configurable:!(2&t),writable:!(4&t),value:n}}},function(t,n,r){var e=r(10),o=r(12);t.exports=function(t){return e(o(t))}},function(t,n,r){var e=r(6),o=r(11),i="".split;t.exports=e(function(){return!Object("z").propertyIsEnumerable(0)})?function(t){return"String"==o(t)?i.call(t,""):Object(t)}:Object},function(t,n){var r={}.toString;t.exports=function(t){return r.call(t).slice(8,-1)}},function(t,n){t.exports=function(t){if(t==S)throw TypeError("Can't call method on "+t);return t}},function(t,n,r){var o=r(14);t.exports=function(t,n){if(!o(t))return t;var r,e;if(n&&"function"==typeof(r=t.toString)&&!o(e=r.call(t)))return e;if("function"==typeof(r=t.valueOf)&&!o(e=r.call(t)))return e;if(!n&&"function"==typeof(r=t.toString)&&!o(e=r.call(t)))return e;throw TypeError("Can't convert object to primitive value")}},function(t,n){t.exports=function(t){return"object"==typeof t?null!==t:"function"==typeof t}},function(t,n,r){var e=r(16),o={}.hasOwnProperty;t.exports=function(t,n){return o.call(e(t),n)}},function(t,n,r){var e=r(12);t.exports=function(t){return Object(e(t))}},function(t,n,r){var e=r(5),o=r(6),i=r(18);t.exports=!e&&!o(function(){return 7!=Object.defineProperty(i("div"),"a",{get:function(){return 7}}).a})},function(t,n,r){var e=r(3),r=r(14),o=e.document,i=r(o)&&r(o.createElement);t.exports=function(t){return i?o.createElement(t):{}}},function(t,n,r){var e=r(5),o=r(20),i=r(8);t.exports=e?function(t,n,r){return o.f(t,n,i(1,r))}:function(t,n,r){return t[n]=r,t}},function(t,n,r){var e=r(5),o=r(17),i=r(21),c=r(13),u=Object.defineProperty;n.f=e?u:function(t,n,r){if(i(t),n=c(n,!0),i(r),o)try{return u(t,n,r)}catch(t){}if("get"in r||"set"in r)throw TypeError("Accessors not supported");return"value"in r&&(t[n]=r.value),t}},function(t,n,r){var e=r(14);t.exports=function(t){if(!e(t))throw TypeError(String(t)+" is not an object");return t}},function(t,n,r){var u=r(3),f=r(19),a=r(15),s=r(23),e=r(24),r=r(26),o=r.get,p=r.enforce,l=String(String).split("String");(t.exports=function(t,n,r,e){var o=!!e&&!!e.unsafe,i=!!e&&!!e.enumerable,c=!!e&&!!e.noTargetGet;"function"==typeof r&&("string"!=typeof n||a(r,"name")||f(r,"name",n),(e=p(r)).source||(e.source=l.join("string"==typeof n?n:""))),t!==u?(o?!c&&t[n]&&(i=!0):delete t[n],i?t[n]=r:f(t,n,r)):i?t[n]=r:s(n,r)})(Function.prototype,"toString",function(){return"function"==typeof this&&o(this).source||e(this)})},function(t,n,r){var e=r(3),o=r(19);t.exports=function(n,r){try{o(e,n,r)}catch(t){e[n]=r}return r}},function(t,n,r){var r=r(25),e=Function.toString;"function"!=typeof r.inspectSource&&(r.inspectSource=function(t){return e.call(t)}),t.exports=r.inspectSource},function(t,n,r){var e=r(3),o=r(23),r="__core-js_shared__",r=e[r]||o(r,{});t.exports=r},function(t,n,r){var e,o,i,c,u,f,a,s,p=r(27),l=r(3),g=r(14),v=r(19),y=r(15),h=r(25),d=r(28),r=r(32),b="Object already initialized",l=l.WeakMap;a=p?(e=h.state||(h.state=new l),o=e.get,i=e.has,c=e.set,u=function(t,n){if(i.call(e,t))throw new TypeError(b);return n.facade=t,c.call(e,t,n),n},f=function(t){return o.call(e,t)||{}},function(t){return i.call(e,t)}):(r[s=d("state")]=!0,u=function(t,n){if(y(t,s))throw new TypeError(b);return n.facade=t,v(t,s,n),n},f=function(t){return y(t,s)?t[s]:{}},function(t){return y(t,s)}),t.exports={set:u,get:f,has:a,enforce:function(t){return a(t)?f(t):u(t,{})},getterFor:function(r){return function(t){var n;if(!g(t)||(n=f(t)).type!==r)throw TypeError("Incompatible receiver, "+r+" required");return n}}}},function(t,n,r){var e=r(3),r=r(24),e=e.WeakMap;t.exports="function"==typeof e&&/native code/.test(r(e))},function(t,n,r){var e=r(29),o=r(31),i=e("keys");t.exports=function(t){return i[t]||(i[t]=o(t))}},function(t,n,r){var e=r(30),o=r(25);(t.exports=function(t,n){return o[t]||(o[t]=n!==S?n:{})})("versions",[]).push({version:"3.11.0",mode:e?"pure":"global",copyright:"© 2021 Denis Pushkarev (zloirock.ru)"})},function(t,n){t.exports=!1},function(t,n){var r=0,e=Math.random();t.exports=function(t){return"Symbol("+String(t===S?"":t)+")_"+(++r+e).toString(36)}},function(t,n){t.exports={}},function(t,n,r){var u=r(15),f=r(34),a=r(4),s=r(20);t.exports=function(t,n){for(var r=f(n),e=s.f,o=a.f,i=0;i<r.length;i++){var c=r[i];u(t,c)||e(t,c,o(n,c))}}},function(t,n,r){var e=r(35),o=r(37),i=r(44),c=r(21);t.exports=e("Reflect","ownKeys")||function(t){var n=o.f(c(t)),r=i.f;return r?n.concat(r(t)):n}},function(t,n,r){function e(t){return"function"==typeof t?t:S}var o=r(36),i=r(3);t.exports=function(t,n){return arguments.length<2?e(o[t])||e(i[t]):o[t]&&o[t][n]||i[t]&&i[t][n]}},function(t,n,r){r=r(3);t.exports=r},function(t,n,r){var e=r(38),o=r(43).concat("length","prototype");n.f=Object.getOwnPropertyNames||function(t){return e(t,o)}},function(t,n,r){var c=r(15),u=r(9),f=r(39).indexOf,a=r(32);t.exports=function(t,n){var r,e=u(t),o=0,i=[];for(r in e)!c(a,r)&&c(e,r)&&i.push(r);for(;n.length>o;)c(e,r=n[o++])&&(~f(i,r)||i.push(r));return i}},function(t,n,r){var f=r(9),a=r(40),s=r(42),r=function(u){return function(t,n,r){var e,o=f(t),i=a(o.length),c=s(r,i);if(u&&n!=n){for(;c<i;)if((e=o[c++])!=e)return!0}else for(;c<i;c++)if((u||c in o)&&o[c]===n)return u||c||0;return!u&&-1}};t.exports={includes:r(!0),indexOf:r(!1)}},function(t,n,r){var e=r(41),o=Math.min;t.exports=function(t){return 0<t?o(e(t),9007199254740991):0}},function(t,n){var r=Math.ceil,e=Math.floor;t.exports=function(t){return isNaN(t=+t)?0:(0<t?e:r)(t)}},function(t,n,r){var e=r(41),o=Math.max,i=Math.min;t.exports=function(t,n){t=e(t);return t<0?o(t+n,0):i(t,n)}},function(t,n){t.exports=["constructor","hasOwnProperty","isPrototypeOf","propertyIsEnumerable","toLocaleString","toString","valueOf"]},function(t,n){n.f=Object.getOwnPropertySymbols},function(t,n,r){var e=r(6),o=/#|\.prototype\./,r=function(t,n){t=c[i(t)];return t==f||t!=u&&("function"==typeof n?e(n):!!n)},i=r.normalize=function(t){return String(t).replace(o,".").toLowerCase()},c=r.data={},u=r.NATIVE="N",f=r.POLYFILL="P";t.exports=r},function(t,n,r){var e=r(15),o=r(16),i=r(28),r=r(47),c=i("IE_PROTO"),u=Object.prototype;t.exports=r?Object.getPrototypeOf:function(t){return t=o(t),e(t,c)?t[c]:"function"==typeof t.constructor&&t instanceof t.constructor?t.constructor.prototype:t instanceof Object?u:null}},function(t,n,r){r=r(6);t.exports=!r(function(){function t(){}return t.prototype.constructor=null,Object.getPrototypeOf(new t)!==t.prototype})},function(t,n,r){var o=r(21),i=r(49);t.exports=Object.setPrototypeOf||("__proto__"in{}?function(){var r,e=!1,t={};try{(r=Object.getOwnPropertyDescriptor(Object.prototype,"__proto__").set).call(t,[]),e=t instanceof Array}catch(t){}return function(t,n){return o(t),i(n),e?r.call(t,n):t.__proto__=n,t}}():S)},function(t,n,r){var e=r(14);t.exports=function(t){if(!e(t)&&null!==t)throw TypeError("Can't set "+String(t)+" as a prototype");return t}},function(t,n,r){function e(){}function o(t){return"<script>"+t+"</"+g+">"}var i,c=r(21),u=r(51),f=r(43),a=r(32),s=r(53),p=r(18),r=r(28),l="prototype",g="script",v=r("IE_PROTO"),y=function(){try{i=document.domain&&new ActiveXObject("htmlfile")}catch(t){}var t;y=i?function(t){t.write(o("")),t.close();var n=t.parentWindow.Object;return t=null,n}(i):((t=p("iframe")).style.display="none",s.appendChild(t),t.src=String("javascript:"),(t=t.contentWindow.document).open(),t.write(o("document.F=Object")),t.close(),t.F);for(var n=f.length;n--;)delete y[l][f[n]];return y()};a[v]=!0,t.exports=Object.create||function(t,n){var r;return null!==t?(e[l]=c(t),r=new e,e[l]=null,r[v]=t):r=y(),n===S?r:u(r,n)}},function(t,n,r){var e=r(5),c=r(20),u=r(21),f=r(52);t.exports=e?Object.defineProperties:function(t,n){u(t);for(var r,e=f(n),o=e.length,i=0;i<o;)c.f(t,r=e[i++],n[r]);return t}},function(t,n,r){var e=r(38),o=r(43);t.exports=Object.keys||function(t){return e(t,o)}},function(t,n,r){r=r(35);t.exports=r("document","documentElement")},function(t,n,r){function h(t,n){this.stopped=t,this.result=n}var d=r(21),b=r(55),x=r(40),m=r(63),O=r(65),w=r(68);t.exports=function(t,n,r){function e(t){return i&&w(i),new h(!0,t)}function o(t){return l?(d(t),v?y(t[0],t[1],e):y(t[0],t[1])):v?y(t,e):y(t)}var i,c,u,f,a,s,p=r&&r.that,l=!(!r||!r.AS_ENTRIES),g=!(!r||!r.IS_ITERATOR),v=!(!r||!r.INTERRUPTED),y=m(n,p,1+l+v);if(g)i=t;else{if("function"!=typeof(g=O(t)))throw TypeError("Target is not iterable");if(b(g)){for(c=0,u=x(t.length);c<u;c++)if((f=o(t[c]))&&f instanceof h)return f;return new h(!1)}i=g.call(t)}for(a=i.next;!(s=a.call(i)).done;){try{f=o(s.value)}catch(t){throw w(i),t}if("object"==typeof f&&f&&f instanceof h)return f}return new h(!1)}},function(t,n,r){var e=r(56),o=r(62),i=e("iterator"),c=Array.prototype;t.exports=function(t){return t!==S&&(o.Array===t||c[i]===t)}},function(t,n,r){var e=r(3),o=r(29),i=r(15),c=r(31),u=r(57),r=r(61),f=o("wks"),a=e.Symbol,s=r?a:a&&a.withoutSetter||c;t.exports=function(t){return i(f,t)&&(u||"string"==typeof f[t])||(u&&i(a,t)?f[t]=a[t]:f[t]=s("Symbol."+t)),f[t]}},function(t,n,r){var e=r(58),o=r(59),r=r(6);t.exports=!!Object.getOwnPropertySymbols&&!r(function(){return!Symbol.sham&&(e?38===o:37<o&&o<41)})},function(t,n,r){var e=r(11),r=r(3);t.exports="process"==e(r.process)},function(t,n,r){var e,o,i=r(3),r=r(60),i=i.process,i=i&&i.versions,i=i&&i.v8;i?o=(e=i.split("."))[0]+e[1]:r&&(!(e=r.match(/Edge\/(\d+)/))||74<=e[1])&&(e=r.match(/Chrome\/(\d+)/))&&(o=e[1]),t.exports=o&&+o},function(t,n,r){r=r(35);t.exports=r("navigator","userAgent")||""},function(t,n,r){r=r(57);t.exports=r&&!Symbol.sham&&"symbol"==typeof Symbol.iterator},function(t,n){t.exports={}},function(t,n,r){var i=r(64);t.exports=function(e,o,t){if(i(e),o===S)return e;switch(t){case 0:return function(){return e.call(o)};case 1:return function(t){return e.call(o,t)};case 2:return function(t,n){return e.call(o,t,n)};case 3:return function(t,n,r){return e.call(o,t,n,r)}}return function(){return e.apply(o,arguments)}}},function(t,n){t.exports=function(t){if("function"!=typeof t)throw TypeError(String(t)+" is not a function");return t}},function(t,n,r){var e=r(66),o=r(62),i=r(56)("iterator");t.exports=function(t){if(t!=S)return t[i]||t["@@iterator"]||o[e(t)]}},function(t,n,r){var e=r(67),o=r(11),i=r(56)("toStringTag"),c="Arguments"==o(function(){return arguments}());t.exports=e?o:function(t){var n;return t===S?"Undefined":null===t?"Null":"string"==typeof(t=function(t,n){try{return t[n]}catch(t){}}(n=Object(t),i))?t:c?o(n):"Object"==(t=o(n))&&"function"==typeof n.callee?"Arguments":t}},function(t,n,r){var e={};e[r(56)("toStringTag")]="z",t.exports="[object z]"===String(e)},function(t,n,r){var e=r(21);t.exports=function(t){var n=t.return;if(n!==S)return e(n.call(t)).value}},function(t,n,r){var e=r(2),o=r(3),r=r(70);e({global:!0},{Reflect:{}}),r(o.Reflect,"Reflect",!0)},function(t,n,r){var e=r(20).f,o=r(15),i=r(56)("toStringTag");t.exports=function(t,n,r){t&&!o(t=r?t:t.prototype,i)&&e(t,i,{configurable:!0,value:n})}},function(t,n,r){function v(t,n,r){return r>t.length?-1:""===n?r:t.indexOf(n,r)}var e=r(2),y=r(12),h=r(72),d=r(73),b=r(74),o=r(56),x=r(30),m=o("replace"),O=RegExp.prototype,w=Math.max;e({target:"String",proto:!0},{replaceAll:function(t,n){var r,e,o,i,c,u,f,a,s=y(this),p=0,l=0,g="";if(null!=t){if((r=h(t))&&!~String(y("flags"in O?t.flags:d.call(t))).indexOf("g"))throw TypeError("`.replaceAll` does not allow non-global regexes");if((e=t[m])!==S)return e.call(t,s,n);if(x&&r)return String(s).replace(t,n)}for(o=String(s),i=String(t),(c="function"==typeof n)||(n=String(n)),u=i.length,f=w(1,u),p=v(o,i,0);-1!==p;)a=c?String(n(i,p,o)):b(i,o,p,[],S,n),g+=o.slice(l,p)+a,l=p+u,p=v(o,i,p+f);return l<o.length&&(g+=o.slice(l)),g}})},function(t,n,r){var e=r(14),o=r(11),i=r(56)("match");t.exports=function(t){var n;return e(t)&&((n=t[i])!==S?!!n:"RegExp"==o(t))}},function(t,n,r){var e=r(21);t.exports=function(){var t=e(this),n="";return t.global&&(n+="g"),t.ignoreCase&&(n+="i"),t.multiline&&(n+="m"),t.dotAll&&(n+="s"),t.unicode&&(n+="u"),t.sticky&&(n+="y"),n}},function(t,n,r){var e=r(16),l=Math.floor,o="".replace,g=/\$([$&'`]|\d{1,2}|<[^>]*>)/g,v=/\$([$&'`]|\d{1,2})/g;t.exports=function(i,c,u,f,a,t){var s=u+i.length,p=f.length,n=v;return a!==S&&(a=e(a),n=g),o.call(t,n,function(t,n){var r;switch(n.charAt(0)){case"$":return"$";case"&":return i;case"`":return c.slice(0,u);case"'":return c.slice(s);case"<":r=a[n.slice(1,-1)];break;default:var e=+n;if(0==e)return t;if(p<e){var o=l(e/10);return 0===o?t:o<=p?f[o-1]===S?n.charAt(1):f[o-1]+n.charAt(1):t}r=f[e-1]}return r===S?"":r})}},function(t,n,r){var e=r(2),o=r(3),r=r(76);e({global:!0,bind:!0,enumerable:!0,forced:!o.setImmediate||!o.clearImmediate},{setImmediate:r.set,clearImmediate:r.clear})},function(t,n,r){function e(t){var n;O.hasOwnProperty(t)&&(n=O[t],delete O[t],n())}function o(t){return function(){e(t)}}function i(t){e(t.data)}var c,u=r(3),f=r(6),a=r(63),s=r(53),p=r(18),l=r(77),g=r(58),v=u.location,y=u.setImmediate,h=u.clearImmediate,d=u.process,b=u.MessageChannel,x=u.Dispatch,m=0,O={},w="onreadystatechange",r=function(t){u.postMessage(t+"",v.protocol+"//"+v.host)};y&&h||(y=function(t){for(var n=[],r=1;r<arguments.length;)n.push(arguments[r++]);return O[++m]=function(){("function"==typeof t?t:Function(t)).apply(S,n)},c(m),m},h=function(t){delete O[t]},g?c=function(t){d.nextTick(o(t))}:x&&x.now?c=function(t){x.now(o(t))}:b&&!l?(b=(l=new b).port2,l.port1.onmessage=i,c=a(b.postMessage,b,1)):u.addEventListener&&"function"==typeof postMessage&&!u.importScripts&&v&&"file:"!==v.protocol&&!f(r)?(c=r,u.addEventListener("message",i,!1)):c=w in p("script")?function(t){s.appendChild(p("script"))[w]=function(){s.removeChild(this),e(t)}}:function(t){setTimeout(o(t),0)}),t.exports={set:y,clear:h}},function(t,n,r){r=r(60);t.exports=/(?:iphone|ipod|ipad).*applewebkit/i.test(r)}],o.c=e,o.d=function(t,n,r){o.o(t,n)||Object.defineProperty(t,n,{enumerable:!0,get:r})},o.r=function(t){"undefined"!=typeof Symbol&&Symbol.toStringTag&&Object.defineProperty(t,Symbol.toStringTag,{value:"Module"}),Object.defineProperty(t,"__esModule",{value:!0})},o.t=function(n,t){if(1&t&&(n=o(n)),8&t)return n;if(4&t&&"object"==typeof n&&n&&n.__esModule)return n;var r=Object.create(null);if(o.r(r),Object.defineProperty(r,"default",{enumerable:!0,value:n}),2&t&&"string"!=typeof n)for(var e in n)o.d(r,e,function(t){return n[t]}.bind(null,e));return r},o.n=function(t){var n=t&&t.__esModule?function(){return t.default}:function(){return t};return o.d(n,"a",n),n},o.o=function(t,n){return Object.prototype.hasOwnProperty.call(t,n)},o.p="",o(o.s=0)}();;
+!function(){"use strict";var n={d:function(t,e){for(var r in e)n.o(e,r)&&!n.o(t,r)&&Object.defineProperty(t,r,{enumerable:!0,get:e[r]})},o:function(n,t){return Object.prototype.hasOwnProperty.call(n,t)},r:function(n){"undefined"!=typeof Symbol&&Symbol.toStringTag&&Object.defineProperty(n,Symbol.toStringTag,{value:"Module"}),Object.defineProperty(n,"__esModule",{value:!0})}},t={};n.r(t),n.d(t,{actions:function(){return S},addAction:function(){return m},addFilter:function(){return p},applyFilters:function(){return k},createHooks:function(){return h},currentAction:function(){return w},currentFilter:function(){return I},defaultHooks:function(){return f},didAction:function(){return O},didFilter:function(){return j},doAction:function(){return b},doingAction:function(){return x},doingFilter:function(){return T},filters:function(){return z},hasAction:function(){return _},hasFilter:function(){return g},removeAction:function(){return A},removeAllActions:function(){return y},removeAllFilters:function(){return F},removeFilter:function(){return v}});var e=function(n){return"string"!=typeof n||""===n?(console.error("The namespace must be a non-empty string."),!1):!!/^[a-zA-Z][a-zA-Z0-9_.\-\/]*$/.test(n)||(console.error("The namespace can only contain numbers, letters, dashes, periods, underscores and slashes."),!1)},r=function(n){return"string"!=typeof n||""===n?(console.error("The hook name must be a non-empty string."),!1):/^__/.test(n)?(console.error("The hook name cannot begin with `__`."),!1):!!/^[a-zA-Z][a-zA-Z0-9_.-]*$/.test(n)||(console.error("The hook name can only contain numbers, letters, dashes, periods and underscores."),!1)},o=function(n,t){return function(o,i,c){let s=arguments.length>3&&void 0!==arguments[3]?arguments[3]:10;const u=n[t];if(!r(o))return;if(!e(i))return;if("function"!=typeof c)return void console.error("The hook callback must be a function.");if("number"!=typeof s)return void console.error("If specified, the hook priority must be a number.");const l={callback:c,priority:s,namespace:i};if(u[o]){const n=u[o].handlers;let t;for(t=n.length;t>0&&!(s>=n[t-1].priority);t--);t===n.length?n[t]=l:n.splice(t,0,l),u.__current.forEach((n=>{n.name===o&&n.currentIndex>=t&&n.currentIndex++}))}else u[o]={handlers:[l],runs:0};"hookAdded"!==o&&n.doAction("hookAdded",o,i,c,s)}},i=function(n,t){let o=arguments.length>2&&void 0!==arguments[2]&&arguments[2];return function(i,c){const s=n[t];if(!r(i))return;if(!o&&!e(c))return;if(!s[i])return 0;let u=0;if(o)u=s[i].handlers.length,s[i]={runs:s[i].runs,handlers:[]};else{const n=s[i].handlers;for(let t=n.length-1;t>=0;t--)n[t].namespace===c&&(n.splice(t,1),u++,s.__current.forEach((n=>{n.name===i&&n.currentIndex>=t&&n.currentIndex--})))}return"hookRemoved"!==i&&n.doAction("hookRemoved",i,c),u}},c=function(n,t){return function(e,r){const o=n[t];return void 0!==r?e in o&&o[e].handlers.some((n=>n.namespace===r)):e in o}},s=function(n,t){let e=arguments.length>2&&void 0!==arguments[2]&&arguments[2];return function(r){const o=n[t];o[r]||(o[r]={handlers:[],runs:0}),o[r].runs++;const i=o[r].handlers;for(var c=arguments.length,s=new Array(c>1?c-1:0),u=1;u<c;u++)s[u-1]=arguments[u];if(!i||!i.length)return e?s[0]:void 0;const l={name:r,currentIndex:0};for(o.__current.push(l);l.currentIndex<i.length;){const n=i[l.currentIndex].callback.apply(null,s);e&&(s[0]=n),l.currentIndex++}return o.__current.pop(),e?s[0]:void 0}},u=function(n,t){return function(){var e,r;const o=n[t];return null!==(e=null===(r=o.__current[o.__current.length-1])||void 0===r?void 0:r.name)&&void 0!==e?e:null}},l=function(n,t){return function(e){const r=n[t];return void 0===e?void 0!==r.__current[0]:!!r.__current[0]&&e===r.__current[0].name}},a=function(n,t){return function(e){const o=n[t];if(r(e))return o[e]&&o[e].runs?o[e].runs:0}};class d{constructor(){this.actions=Object.create(null),this.actions.__current=[],this.filters=Object.create(null),this.filters.__current=[],this.addAction=o(this,"actions"),this.addFilter=o(this,"filters"),this.removeAction=i(this,"actions"),this.removeFilter=i(this,"filters"),this.hasAction=c(this,"actions"),this.hasFilter=c(this,"filters"),this.removeAllActions=i(this,"actions",!0),this.removeAllFilters=i(this,"filters",!0),this.doAction=s(this,"actions"),this.applyFilters=s(this,"filters",!0),this.currentAction=u(this,"actions"),this.currentFilter=u(this,"filters"),this.doingAction=l(this,"actions"),this.doingFilter=l(this,"filters"),this.didAction=a(this,"actions"),this.didFilter=a(this,"filters")}}var h=function(){return new d};const f=h(),{addAction:m,addFilter:p,removeAction:A,removeFilter:v,hasAction:_,hasFilter:g,removeAllActions:y,removeAllFilters:F,doAction:b,applyFilters:k,currentAction:w,currentFilter:I,doingAction:x,doingFilter:T,didAction:O,didFilter:j,actions:S,filters:z}=f;(window.wp=window.wp||{}).hooks=t}();;
